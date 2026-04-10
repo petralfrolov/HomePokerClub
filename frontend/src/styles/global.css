@@ -1,0 +1,80 @@
+:root {
+  --bg-primary: #1a1a2e;
+  --bg-secondary: #16213e;
+  --bg-table: #1b4332;
+  --bg-table-border: #2d6a4f;
+  --text-primary: #e0e0e0;
+  --text-secondary: #a0a0a0;
+  --text-accent: #ffd700;
+  --color-red: #e74c3c;
+  --color-green: #27ae60;
+  --color-yellow: #f39c12;
+  --color-blue: #3498db;
+  --font-main: 'Inter', sans-serif;
+  --font-cards: 'Playfair Display', serif;
+  --timer-green: #27ae60;
+  --timer-yellow: #f39c12;
+  --timer-red: #e74c3c;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-main);
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 1.5rem;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  z-index: 100;
+}
+
+.app-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text-accent);
+}
+
+.app-main {
+  flex: 1;
+  overflow: auto;
+}
+
+button {
+  cursor: pointer;
+  font-family: var(--font-main);
+}
+
+input, select {
+  font-family: var(--font-main);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--bg-secondary);
+  border-radius: 3px;
+}

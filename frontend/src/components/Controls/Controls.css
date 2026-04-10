@@ -1,0 +1,298 @@
+.game-controls {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: flex-end;
+  gap: 0.6rem;
+  z-index: 50;
+  user-select: none;
+  touch-action: none;
+}
+
+.controls-main {
+  background: rgba(22, 33, 62, 0.95);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px 16px 0 0;
+  padding: 0.4rem 1.5rem 0.8rem;
+  backdrop-filter: blur(10px);
+}
+
+.controls-drag-handle {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 0.9rem;
+  line-height: 1;
+  margin-bottom: 0.3rem;
+  cursor: grab;
+}
+
+/* My cards attached to the left of the menu */
+.controls-my-cards {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 6px;
+  filter: drop-shadow(0 4px 12px rgba(0,0,0,0.5));
+}
+
+.controls-row {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+}
+
+.control-btn {
+  padding: 0.7rem 1.4rem;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: transform 0.1s, background 0.2s;
+  white-space: nowrap;
+}
+
+.control-btn:hover:not(:disabled) {
+  transform: scale(1.05);
+}
+
+.control-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.fold-btn {
+  background: var(--color-red);
+  color: white;
+}
+
+.check-btn {
+  background: var(--color-green);
+  color: white;
+}
+
+.call-btn {
+  background: var(--color-blue);
+  color: white;
+}
+
+.raise-btn,
+.raise-confirm-btn {
+  background: var(--color-yellow);
+  color: #000;
+}
+
+.allin-btn {
+  background: linear-gradient(135deg, #e74c3c, #c0392b);
+  color: white;
+}
+
+.raise-input-container {
+  display: flex;
+  gap: 0.3rem;
+  align-items: center;
+}
+
+.raise-input-container input {
+  width: 80px;
+  padding: 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+/* Raise slider */
+.raise-slider-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 160px;
+}
+
+.raise-slider-row {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.raise-step-btn {
+  width: 28px;
+  height: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+  font-size: 1rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+}
+
+.raise-step-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.raise-slider {
+  flex: 1;
+  height: 6px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+  outline: none;
+}
+
+.raise-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--color-yellow, #f1c40f);
+  cursor: pointer;
+  border: 2px solid rgba(0, 0, 0, 0.3);
+}
+
+.raise-value-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  justify-content: center;
+}
+
+.raise-value {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--color-yellow, #f1c40f);
+  min-width: 50px;
+  text-align: center;
+}
+
+.control-btn-cancel {
+  padding: 0.4rem 0.6rem;
+  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-secondary);
+  border-radius: 6px;
+  font-size: 0.8rem;
+}
+
+.controls-secondary {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  justify-content: center;
+}
+
+.control-btn-small {
+  padding: 0.3rem 0.8rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  transition: background 0.2s;
+}
+
+.control-btn-small:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.rebuy-btn {
+  border-color: var(--text-accent);
+  color: var(--text-accent);
+}
+
+.rebuy-controls {
+  align-items: center;
+}
+
+.rebuy-range-hint {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.rebuy-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 280px;
+}
+
+.rebuy-controls-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  justify-content: space-between;
+}
+
+.rebuy-value-display {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-accent);
+  min-width: 60px;
+}
+
+.rebuy-slider {
+  width: 100%;
+  height: 6px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+  outline: none;
+  accent-color: var(--text-accent);
+}
+
+.rebuy-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--text-accent);
+  cursor: pointer;
+  border: 2px solid rgba(0, 0, 0, 0.3);
+}
+
+.rebuy-timer-bar-container {
+  width: 100%;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  margin-bottom: 0.5rem;
+  overflow: hidden;
+}
+
+.rebuy-timer-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #e74c3c, #f39c12);
+  border-radius: 2px;
+  transition: width 0.1s linear;
+}
+
+/* Sound controls */
+.sound-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sound-mute-btn {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0.2rem;
+}
+
+.sound-slider {
+  width: 80px;
+  height: 4px;
+  accent-color: var(--text-accent);
+}

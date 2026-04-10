@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.venv/
+venv/
+env/
+*.egg-info/
+dist/
+build/
+
+# Database
+backend/data/poker.db
+backend/data/poker.db-shm
+backend/data/poker.db-wal
+
+# Uploaded avatars (user data)
+backend/data/avatars/*
+backend/data/player_avatars/*
+!backend/data/avatars/.gitkeep
+!backend/data/player_avatars/.gitkeep
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env

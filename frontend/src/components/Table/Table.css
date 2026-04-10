@@ -1,0 +1,290 @@
+.table-view {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 48px);
+}
+
+.table-top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 1.5rem;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.table-info {
+  display: flex;
+  gap: 1.5rem;
+  align-items: center;
+}
+
+.table-info-name {
+  font-weight: 600;
+  color: var(--text-accent);
+}
+
+.table-info-blinds,
+.table-info-round {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.table-actions-top {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.table-area {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Poker table */
+.poker-table-wrapper {
+  position: relative;
+  width: 90%;
+  max-width: 1260px;
+  aspect-ratio: 1.8 / 1;
+}
+
+.poker-table {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.poker-table-felt {
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(ellipse at center, #1b4332 0%, #14332a 60%, #0f2922 100%);
+  border-radius: 50%;
+  border: 6px solid #3a2c1a;
+  box-shadow:
+    0 0 30px rgba(0, 0, 0, 0.5),
+    inset 0 0 60px rgba(0, 0, 0, 0.3),
+    0 0 0 12px #2a1f0f,
+    0 0 0 14px #1a1a2e;
+  position: relative;
+  overflow: visible;
+}
+
+/* Pot */
+.pot-display {
+  position: absolute;
+  top: 20%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 10;
+}
+
+.pot-amount {
+  background: rgba(0, 0, 0, 0.6);
+  padding: 0.3rem 0.8rem;
+  border-radius: 12px;
+  font-weight: 700;
+  color: var(--text-accent);
+  font-size: 1rem;
+  white-space: nowrap;
+}
+
+/* Community cards */
+.community-cards {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  gap: 6px;
+  z-index: 10;
+}
+
+/* Card styles */
+.card {
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-cards);
+  font-weight: 700;
+  user-select: none;
+}
+
+.card-small {
+  width: 54px;
+  height: 78px;
+  font-size: 1.05rem;
+}
+
+.card-medium {
+  width: 72px;
+  height: 102px;
+  font-size: 1.35rem;
+}
+
+.card-large {
+  width: 90px;
+  height: 128px;
+  font-size: 1.65rem;
+}
+
+.card-face {
+  background: white;
+  border: 1px solid #ccc;
+  cursor: default;
+  position: relative;
+}
+
+.card-rank {
+  font-size: 1.1em;
+  line-height: 1;
+}
+
+.card-suit {
+  font-size: 1.3em;
+  line-height: 1;
+}
+
+.card-back {
+  background: linear-gradient(135deg, #1a3c6e, #2a5298);
+  border: 2px solid #3a6cc9;
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 1.5em;
+}
+
+.card-back-pattern {
+  opacity: 0.5;
+}
+
+.card-reveal-hint {
+  position: absolute;
+  bottom: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px;
+  white-space: nowrap;
+  color: var(--text-accent);
+  background: rgba(0, 0, 0, 0.7);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-family: var(--font-main);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.card-face:hover .card-reveal-hint {
+  opacity: 1;
+}
+
+/* Cashout button */
+.btn-cashout {
+  padding: 0.5rem 1.2rem;
+  border: 1px solid var(--text-accent);
+  border-radius: 8px;
+  background: rgba(255, 215, 0, 0.15);
+  color: var(--text-accent);
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-cashout:hover {
+  background: rgba(255, 215, 0, 0.3);
+}
+
+/* Cashout ledger */
+.cashout-ledger {
+  position: fixed;
+  bottom: 16px;
+  left: 16px;
+  background: rgba(0, 0, 0, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  padding: 0.8rem 1rem;
+  z-index: 100;
+  min-width: 220px;
+  max-width: 320px;
+  backdrop-filter: blur(8px);
+}
+
+.cashout-ledger-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-accent);
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.cashout-ledger-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 0.8rem;
+}
+
+.cashout-ledger-row:last-child {
+  border-bottom: none;
+}
+
+.ledger-nick {
+  font-weight: 600;
+  color: var(--text-primary);
+  min-width: 60px;
+}
+
+.ledger-detail {
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+}
+
+.ledger-delta {
+  font-weight: 700;
+  margin-left: auto;
+}
+
+.ledger-delta.positive {
+  color: #27ae60;
+}
+
+.ledger-delta.negative {
+  color: #e74c3c;
+}
+
+/* Stalling accusation overlay */
+.stalling-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(180, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  pointer-events: none;
+  animation: stalling-pulse 0.4s ease;
+}
+
+@keyframes stalling-pulse {
+  0%   { opacity: 0; transform: scale(1.15); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+.stalling-text {
+  font-size: 7rem;
+  font-weight: 900;
+  color: #fff;
+  text-shadow:
+    0 0 30px rgba(255, 0, 0, 0.9),
+    0 0 60px rgba(255, 0, 0, 0.6),
+    2px 2px 8px rgba(0, 0, 0, 0.8);
+  letter-spacing: 0.05em;
+  user-select: none;
+}

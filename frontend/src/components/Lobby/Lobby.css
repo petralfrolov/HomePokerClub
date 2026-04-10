@@ -1,0 +1,157 @@
+.lobby {
+  padding: 2rem;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.lobby-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.lobby-header h2 {
+  font-size: 1.5rem;
+  color: var(--text-accent);
+}
+
+.nick-form {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.nick-form input {
+  padding: 0.5rem 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+}
+
+.nick-form button,
+.btn-primary {
+  padding: 0.5rem 1.2rem;
+  border: none;
+  border-radius: 8px;
+  background: var(--color-green);
+  color: white;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: background 0.2s;
+}
+
+.btn-primary:hover {
+  background: #219653;
+}
+
+.nick-display {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.nick-display span {
+  color: var(--text-secondary);
+}
+
+.lobby-loading,
+.lobby-empty {
+  text-align: center;
+  color: var(--text-secondary);
+  padding: 3rem;
+  font-size: 1.1rem;
+}
+
+.tables-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.table-card {
+  background: var(--bg-secondary);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 1.2rem;
+  cursor: pointer;
+  transition: transform 0.2s, border-color 0.2s;
+}
+
+.table-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--text-accent);
+}
+
+.table-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.8rem;
+}
+
+.table-name {
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.table-type {
+  font-size: 0.75rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.table-type.cash {
+  background: rgba(52, 152, 219, 0.2);
+  color: var(--color-blue);
+}
+
+.table-type.tournament {
+  background: rgba(231, 76, 60, 0.2);
+  color: var(--color-red);
+}
+
+.table-card-info {
+  display: flex;
+  justify-content: space-between;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  margin-bottom: 0.6rem;
+}
+
+.table-status {
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.table-status.waiting {
+  color: var(--color-yellow);
+}
+
+.table-status.running {
+  color: var(--color-green);
+}
+
+.table-status.finished {
+  color: var(--text-secondary);
+}
+
+.btn-delete-table {
+  margin-top: 0.6rem;
+  padding: 0.3rem 0.8rem;
+  border: 1px solid rgba(231, 76, 60, 0.4);
+  border-radius: 8px;
+  background: rgba(231, 76, 60, 0.15);
+  color: var(--color-red);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-delete-table:hover {
+  background: rgba(231, 76, 60, 0.3);
+}
