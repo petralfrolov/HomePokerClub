@@ -111,6 +111,14 @@ export function useWebSocket(tableId: string | null) {
       case 'cashout_pending':
         setCashoutPending(true);
         break;
+      case 'table_deleted': {
+        useStore.getState().setTableId(null);
+        useStore.getState().setGameState(null);
+        // Close WS to prevent reconnect loop
+        wsRef.current?.close();
+        // Navigate to lobby — handled by the component via tableId becoming null
+        break;
+      }
       case 'stalling_accused': {
         const myPlayer = useStore.getState().gameState?.players.find(
           (p) => p.session_id === sessionId

@@ -227,6 +227,7 @@ async def join_table(table_id: str, body: JoinTable, db: AsyncSession = Depends(
 
     # Broadcast updated game state so all clients see the new player
     if game:
+        game_engine.touch(table_id)
         for p in game.players:
             snapshot = game_engine.get_game_snapshot(game, for_session_id=p.session_id)
             await ws_manager.send_personal(table_id, p.session_id, "game_state", snapshot)

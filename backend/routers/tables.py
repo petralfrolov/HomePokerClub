@@ -510,6 +510,7 @@ async def game_action(table_id: str, body: GameAction, db: AsyncSession = Depend
         "amount": body.amount,
     })
 
+    game_engine.touch(table_id)
     hand_ended = await _check_hand_end(table_id, game, result)
 
     if not hand_ended:

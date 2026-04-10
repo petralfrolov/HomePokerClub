@@ -7,6 +7,7 @@ import json
 import logging
 import random
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from typing import Any
 
 from treys import Card, Deck, Evaluator
@@ -89,6 +90,9 @@ class GameState:
     # Whether the last hand ended with a showdown (vs fold win)
     last_hand_showdown: bool = False
 
+    # Last activity timestamp (used for idle table cleanup)
+    last_activity_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+
     def active_players(self) -> list[PlayerState]:
         return [p for p in self.players if p.status in ("active", "allin")]
 
@@ -122,6 +126,12 @@ class GameEngine:
 
     def remove_game(self, table_id: str) -> None:
         self.games.pop(table_id, None)
+
+    def touch(self, table_id: str) -> None:
+        """Update the last activity timestamp for a table."""
+        game = self.games.get(table_id)
+        if game:
+            game.last_activity_at = datetime.now(timezone.utc)
 
     def add_player(self, table_id: str, player: PlayerState) -> None:
         state = self.games[table_id]

@@ -2,9 +2,11 @@
 Poker App — FastAPI main entry point.
 """
 
+import asyncio
 import json
 import logging
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
@@ -24,6 +26,62 @@ from backend.services.game_engine import game_engine
 from sqlalchemy import select
 from backend.database import async_session
 from backend.models.tables import Table, Player
+
+
+IDLE_TABLE_TIMEOUT = timedelta(minutes=60)
+
+
+async def _cleanup_idle_tables():
+    """Background task: delete tables with no activity for IDLE_TABLE_TIMEOUT."""
+    from backend.models.tables import GameRound, RoundAction
+    from sqlalchemy import delete as sa_delete
+
+    while True:
+        await asyncio.sleep(300)  # check every 5 minutes
+        now = datetime.now(timezone.utc)
+        stale_ids = [
+            table_id
+            for table_id, game in list(game_engine.games.items())
+            if (now - game.last_activity_at) >= IDLE_TABLE_TIMEOUT
+        ]
+        if not stale_ids:
+            continue
+
+        async with async_session() as db:
+            for table_id in stale_ids:
+                try:
+                    # Notify connected clients before dropping them
+                    await ws_manager.broadcast_all(table_id, "table_deleted", {
+                        "reason": "idle_timeout"
+                    })
+
+                    # Delete RoundActions → GameRounds → Players → Table
+                    rounds_result = await db.execute(
+                        select(GameRound).where(GameRound.table_id == table_id)
+                    )
+                    for r in rounds_result.scalars().all():
+                        await db.execute(
+                            sa_delete(RoundAction).where(RoundAction.round_id == r.id)
+                        )
+                        await db.delete(r)
+
+                    await db.execute(
+                        sa_delete(Player).where(Player.table_id == table_id)
+                    )
+
+                    tbl = await db.get(Table, table_id)
+                    if tbl:
+                        await db.delete(tbl)
+
+                    await db.commit()
+                    game_engine.remove_game(table_id)
+                    logger.info("Deleted idle table %s (no activity for 60 min)", table_id)
+                except Exception:
+                    logger.exception("Error cleaning up idle table %s", table_id)
+                    await db.rollback()
+
+
+
 
 
 logging.basicConfig(
@@ -75,8 +133,10 @@ async def lifespan(app: FastAPI):
                 )
     
     logger.info("Poker server started and games recovered from DB")
+    cleanup_task = asyncio.create_task(_cleanup_idle_tables())
     yield
     # Shutdown
+    cleanup_task.cancel()
     logger.info("Poker server shutting down")
 
 
