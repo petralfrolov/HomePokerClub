@@ -3,7 +3,6 @@ import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../../store/useStore';
 import { api } from '../../api';
-import { playSound } from '../../hooks/useSound';
 import { CardDisplay } from '../Table/CardDisplay';
 import './Controls.css';
 
@@ -17,7 +16,6 @@ export function GameControls() {
   const tableConfig = useStore((s) => s.tableConfig);
   const rebuyWindow = useStore((s) => s.rebuyWindow);
   const [raiseAmount, setRaiseAmount] = useState<number>(0);
-  const [showRaise, setShowRaise] = useState(false);
   const [loading, setLoading] = useState(false);
   const [rebuyAmount, setRebuyAmount] = useState<number>(0);
   const [rebuyTimeLeft, setRebuyTimeLeft] = useState<number>(0);
@@ -53,6 +51,30 @@ export function GameControls() {
     const interval = setInterval(update, 100);
     return () => clearInterval(interval);
   }, [isBustInWindow, rebuyWindow, hasRequestedRebuy, navigate, setTableId, setGameState]);
+
+  // Reset rebuy request state when a new rebuy window opens
+  useEffect(() => {
+    if (rebuyWindow) {
+      setHasRequestedRebuy(false);
+    }
+  }, [rebuyWindow]);
+
+  // Navigate home if rebuy window closed but player is still bust after requesting rebuy
+  useEffect(() => {
+    if (myPlayer?.status === 'bust' && hasRequestedRebuy && rebuyWindow === null) {
+      const timeout = setTimeout(() => {
+        const cur = useStore.getState().gameState?.players.find(
+          (p) => p.session_id === useStore.getState().sessionId
+        );
+        if (cur?.status === 'bust') {
+          setTableId(null);
+          setGameState(null);
+          navigate('/');
+        }
+      }, 2000);
+      return () => clearTimeout(timeout);
+    }
+  }, [myPlayer?.status, hasRequestedRebuy, rebuyWindow, navigate, setTableId, setGameState]);
 
   if (!gameState || !tableId) return null;
   if (!myPlayer) return null;
@@ -145,10 +167,14 @@ export function GameControls() {
     return best;
   }
 
+  // Pot-based raise presets (rounded to BB multiples)
+  const roundToBB = (val: number) => Math.round(val / bb) * bb;
+  const halfPotRaise = Math.max(minRaise, Math.min(maxRaise, roundToBB(gameState.pot / 2)));
+  const fullPotRaise = Math.max(minRaise, Math.min(maxRaise, roundToBB(gameState.pot)));
+
   async function doAction(action: string, amount?: number) {
     setLoading(true);
     try {
-      playSound(action === 'allin' ? 'allin' : action);
       await api.gameAction(tableId!, {
         session_id: sessionId,
         action,
@@ -158,7 +184,6 @@ export function GameControls() {
       console.error(e.message);
     } finally {
       setLoading(false);
-      setShowRaise(false);
     }
   }
 
@@ -198,6 +223,43 @@ export function GameControls() {
 
       <div className="controls-main" style={{ opacity: canAct ? 1 : 0.45, pointerEvents: canAct ? 'auto' : 'none' }}>
         <div className="controls-drag-handle" style={{ pointerEvents: 'auto' }}>⠿</div>
+        {/* Always-visible raise slider */}
+        <div className="raise-slider-container">
+          <div className="raise-presets-row">
+            <button
+              className="raise-preset-btn"
+              onClick={() => setRaiseAmount(halfPotRaise)}
+              disabled={loading}
+            >½ Банк</button>
+            <button
+              className="raise-preset-btn"
+              onClick={() => setRaiseAmount(fullPotRaise)}
+              disabled={loading}
+            >Банк</button>
+          </div>
+          <div className="raise-slider-row">
+            <button
+              className="raise-step-btn"
+              onClick={() => setRaiseAmount(raiseSteps[Math.max(0, closestStepIndex(raiseAmount || minRaise) - 1)])}
+            >−</button>
+            <input
+              type="range"
+              className="raise-slider"
+              min={0}
+              max={raiseSteps.length - 1}
+              step={1}
+              value={closestStepIndex(raiseAmount || minRaise)}
+              onChange={(e) => setRaiseAmount(raiseSteps[parseInt(e.target.value)])}
+              onPointerDown={(e) => e.stopPropagation()}
+            />
+            <button
+              className="raise-step-btn"
+              onClick={() => setRaiseAmount(raiseSteps[Math.min(raiseSteps.length - 1, closestStepIndex(raiseAmount || minRaise) + 1)])}
+            >+</button>
+            <span className="raise-value">{raiseAmount || minRaise}</span>
+          </div>
+        </div>
+
         <div className="controls-row">
           <button
             className="control-btn fold-btn"
@@ -225,52 +287,13 @@ export function GameControls() {
             </button>
           )}
 
-          {showRaise ? (
-            <div className="raise-slider-container">
-              <div className="raise-slider-row">
-                <button
-                  className="raise-step-btn"
-                  onClick={() => setRaiseAmount(raiseSteps[Math.max(0, closestStepIndex(raiseAmount || minRaise) - 1)])}
-                >−</button>
-                <input
-                  type="range"
-                  className="raise-slider"
-                  min={0}
-                  max={raiseSteps.length - 1}
-                  step={1}
-                  value={closestStepIndex(raiseAmount || minRaise)}
-                  onChange={(e) => setRaiseAmount(raiseSteps[parseInt(e.target.value)])}
-                  onPointerDown={(e) => e.stopPropagation()}
-                />
-                <button
-                  className="raise-step-btn"
-                  onClick={() => setRaiseAmount(raiseSteps[Math.min(raiseSteps.length - 1, closestStepIndex(raiseAmount || minRaise) + 1)])}
-                >+</button>
-              </div>
-              <div className="raise-value-row">
-                <span className="raise-value">{raiseAmount || minRaise}</span>
-                <button
-                  className="control-btn raise-confirm-btn"
-                  onClick={() => doAction('raise', raiseAmount || minRaise)}
-                  disabled={loading}
-                >
-                  Рейз
-                </button>
-                <button className="control-btn-cancel" onClick={() => setShowRaise(false)}>✕</button>
-              </div>
-            </div>
-          ) : (
-            <button
-              className="control-btn raise-btn"
-              onClick={() => {
-                setRaiseAmount(minRaise);
-                setShowRaise(true);
-              }}
-              disabled={loading}
-            >
-              Рейз
-            </button>
-          )}
+          <button
+            className="control-btn raise-confirm-btn"
+            onClick={() => doAction('raise', raiseAmount || minRaise)}
+            disabled={loading}
+          >
+            Рейз {raiseAmount || minRaise}
+          </button>
 
           <button
             className="control-btn allin-btn"

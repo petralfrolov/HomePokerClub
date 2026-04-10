@@ -173,6 +173,33 @@
   text-align: center;
 }
 
+.raise-presets-row {
+  display: flex;
+  gap: 0.3rem;
+  justify-content: center;
+}
+
+.raise-preset-btn {
+  padding: 0.2rem 0.6rem;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.raise-preset-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.raise-preset-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .control-btn-cancel {
   padding: 0.4rem 0.6rem;
   border: none;

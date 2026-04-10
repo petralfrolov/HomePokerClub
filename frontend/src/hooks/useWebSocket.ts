@@ -142,8 +142,14 @@ export function useWebSocket(tableId: string | null) {
         }
         break;
       }
+      case 'action_made': {
+        const act = data.action;
+        if (act === 'fold') playSound('fold');
+        else if (act === 'check') playSound('check');
+        else if (act === 'allin') playSound('allin');
+        break;
+      }
       case 'community_cards':
-      case 'action_made':
       case 'player_joined':
       case 'player_left':
       case 'pot_update':
