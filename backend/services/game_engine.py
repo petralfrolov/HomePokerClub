@@ -173,7 +173,7 @@ class GameEngine:
 
         # Check Danilka event (10% chance)
         danilka_event = False
-        if state.dealer_type == "danilka" and random.random() < 1:
+        if state.dealer_type == "danilka" and random.random() < 0.05:
             danilka_event = True
             state.danilka_event_this_round = True
 

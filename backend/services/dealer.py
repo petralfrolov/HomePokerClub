@@ -10,7 +10,7 @@ from typing import Any
 logger = logging.getLogger("poker.dealer")
 
 FROL_TIP_TIMEOUT = 15  # seconds
-FROL_DEFAULT_TIP_PERCENT = 50  # auto-tip if timeout
+FROL_DEFAULT_TIP_PERCENT = 5  # auto-tip if timeout
 
 # Frol decline button types
 DECLINE_FLYING = "flying"
@@ -20,7 +20,7 @@ FROL_DECLINE_TYPES = [DECLINE_FLYING, DECLINE_INVISIBLE, DECLINE_TRICK]
 
 
 def should_trigger_danilka_event() -> bool:
-    return random.random() < 0.10
+    return random.random() < 0.05
 
 
 def get_frol_tip_request(pot: int, winner_id: str) -> dict[str, Any]:
@@ -31,22 +31,22 @@ def get_frol_tip_request(pot: int, winner_id: str) -> dict[str, Any]:
         "winner_id": winner_id,
         "decline_button_type": decline_type,
         "tip_timeout": FROL_TIP_TIMEOUT,
-        "min_tip_percent": 5,
-        "max_tip_percent": 100,
-        "tip_step": 5,
+        "min_tip_percent": 2,
+        "max_tip_percent": 10,
+        "tip_step": 1,
     }
 
 
 def calculate_frol_tip(pot: int, percent: int) -> int:
-    clamped = max(5, min(100, percent))
+    clamped = max(2, min(10, percent))
     return (pot * clamped) // 100
 
 
 def handle_frol_decline(decline_type: str, pot: int) -> dict[str, Any]:
     """Handle Frol decline button press."""
     if decline_type == DECLINE_TRICK:
-        # Trick button: user actually tips 100%
-        tip_amount = pot
+        # Trick button: user actually tips 5%
+        tip_amount = pot * FROL_DEFAULT_TIP_PERCENT // 100
         return {
             "declined": False,
             "reason": "trick_button",
