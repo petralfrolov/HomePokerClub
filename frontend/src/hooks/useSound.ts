@@ -2,6 +2,8 @@ import { Howl } from 'howler';
 import { useStore } from '../store/useStore';
 
 const sounds: Record<string, Howl> = {};
+const lastPlayed: Record<string, number> = {};
+const DEDUP_MS = 100;
 
 // Map sound name → list of numbered file variants
 const SOUND_VARIANTS: Record<string, number> = {
@@ -39,6 +41,10 @@ function getSound(name: string, file: string): Howl {
 export function playSound(name: string) {
   const state = useStore.getState();
   if (state.soundMuted) return;
+
+  const now = Date.now();
+  if (lastPlayed[name] && now - lastPlayed[name] < DEDUP_MS) return;
+  lastPlayed[name] = now;
 
   const file = getSoundFile(name);
   const sound = getSound(name, file);

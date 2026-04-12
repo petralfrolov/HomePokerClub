@@ -18,6 +18,7 @@ export function useWebSocket(tableId: string | null) {
 
   const connect = useCallback(() => {
     if (!tableId || !sessionId) return;
+    intentionalClose.current = false;
 
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = `${protocol}//${window.location.host}/ws/${tableId}?session_id=${sessionId}`;
@@ -205,6 +206,7 @@ export function useWebSocket(tableId: string | null) {
   useEffect(() => {
     const cleanup = connect();
     return () => {
+      intentionalClose.current = true;
       cleanup?.();
       wsRef.current?.close();
     };
