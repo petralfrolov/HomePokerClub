@@ -59,15 +59,16 @@ export function TableView() {
 
   if (!tableId) return null;
 
-  const players = gameState?.players || [];
+  // Sort players by seat_index to ensure clockwise visual order
+  const sortedPlayers = [...(gameState?.players || [])].sort((a, b) => a.seat_index - b.seat_index);
   const isAdmin = tableConfig?.admin_session_id === sessionId;
   const isWaiting = gameState?.stage === 'waiting' || !gameState?.stage;
 
-  // Reorder players so current user is always at the bottom (last position)
-  const myIndex = players.findIndex((p) => p.session_id === sessionId);
+  // Reorder players so current user is always at the bottom (index 0)
+  const myIndex = sortedPlayers.findIndex((p) => p.session_id === sessionId);
   const reorderedPlayers = myIndex >= 0
-    ? [...players.slice(myIndex), ...players.slice(0, myIndex)]
-    : players;
+    ? [...sortedPlayers.slice(myIndex), ...sortedPlayers.slice(0, myIndex)]
+    : sortedPlayers;
 
   async function handleStart() {
     try {
@@ -105,7 +106,7 @@ export function TableView() {
           ) : null}
         </div>
         <div className="table-actions-top">
-          {isAdmin && isWaiting && players.length >= 2 && (
+          {isAdmin && isWaiting && sortedPlayers.length >= 2 && (
             <button className="btn-primary" onClick={handleStart}>▶ Начать игру</button>
           )}
           {tableConfig?.type === 'cash' && (

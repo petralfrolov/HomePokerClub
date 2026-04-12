@@ -3,14 +3,15 @@ import { useStore } from '../store/useStore';
 
 const sounds: Record<string, Howl> = {};
 const lastPlayed: Record<string, number> = {};
-const DEDUP_MS = 100;
+const DEDUP_MS = 500;
 
 // Map sound name → list of numbered file variants
 const SOUND_VARIANTS: Record<string, number> = {
   card_received: 1,
   your_turn: 1,
   fold: 1,
-  check: 1,
+  check: 2,
+  call: 1,
   allin: 2,
   raise: 1,
   win: 1,

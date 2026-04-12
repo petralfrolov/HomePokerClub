@@ -19,6 +19,15 @@ function getSavedNickname(): string {
   return localStorage.getItem('nickname') || '';
 }
 
+function getSavedVolume(): number {
+  const v = localStorage.getItem('sound_volume');
+  return v !== null ? parseFloat(v) : 0.7;
+}
+
+function getSavedMuted(): boolean {
+  return localStorage.getItem('sound_muted') === 'true';
+}
+
 interface AppState {
   // Session
   sessionId: string;
@@ -144,8 +153,14 @@ export const useStore = create<AppState>((set) => ({
   showKickedOverlay: false,
   setShowKickedOverlay: (v) => set({ showKickedOverlay: v }),
 
-  soundVolume: 0.7,
-  soundMuted: false,
-  setSoundVolume: (v) => set({ soundVolume: v }),
-  setSoundMuted: (v) => set({ soundMuted: v }),
+  soundVolume: getSavedVolume(),
+  soundMuted: getSavedMuted(),
+  setSoundVolume: (v) => {
+    localStorage.setItem('sound_volume', String(v));
+    set({ soundVolume: v });
+  },
+  setSoundMuted: (v) => {
+    localStorage.setItem('sound_muted', String(v));
+    set({ soundMuted: v });
+  },
 }));

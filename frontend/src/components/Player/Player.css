@@ -191,6 +191,13 @@
   border-radius: 3px;
 }
 
+/* Folded cards — dim with red tint */
+.player-cards.folded-cards .card {
+  filter: saturate(0.3) brightness(0.5);
+  box-shadow: 0 0 6px rgba(200, 50, 50, 0.5);
+  border: 1px solid rgba(200, 50, 50, 0.4);
+}
+
 /* Context menu */
 .context-menu {
   position: absolute;

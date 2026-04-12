@@ -159,7 +159,7 @@ export function PlayerSeat({ player, totalPlayers, index }: Props) {
       )}
 
       {/* Cards */}
-      <div className="player-cards">
+      <div className={`player-cards ${player.status === 'folded' ? 'folded-cards' : ''}`}>
         <AnimatePresence>
           {player.hole_cards && player.hole_cards.length > 0 && (!isMe || player.status === 'allin' || ((gameState?.stage === 'showdown' || gameState?.stage === 'waiting') && player.status !== 'folded')) ? (
             // Show actual cards — server sends them when visible (showdown, post-hand, or own allin)
@@ -173,6 +173,17 @@ export function PlayerSeat({ player, totalPlayers, index }: Props) {
                 <CardDisplay card={card} size="small" />
               </motion.div>
             ))
+          ) : isMe && player.status === 'folded' && player.hole_cards && player.hole_cards.length > 0 ? (
+            // Own folded cards — show dimmed with red tint
+            player.hole_cards.map((card, i) => (
+              <motion.div
+                key={`folded-own-${card}-${i}`}
+                initial={{ opacity: 0.4 }}
+                animate={{ opacity: 0.4 }}
+              >
+                <CardDisplay card={card} size="small" />
+              </motion.div>
+            ))
           ) : !isMe && player.revealed_cards?.length ? (
             // Revealed cards
             <>
@@ -182,6 +193,19 @@ export function PlayerSeat({ player, totalPlayers, index }: Props) {
               {player.revealed_cards.length < 2 && (
                 <CardDisplay card="" size="small" faceDown />
               )}
+            </>
+          ) : !isMe && gameState?.stage && gameState.stage !== 'waiting' && player.status === 'folded' ? (
+            // Other players' folded cards — show face-down, dimmed with red tint
+            <>
+              {[0, 1].map((i) => (
+                <motion.div
+                  key={`folded-${i}-${gameState?.round_number}`}
+                  initial={{ opacity: 0.35 }}
+                  animate={{ opacity: 0.35 }}
+                >
+                  <CardDisplay card="" size="small" faceDown />
+                </motion.div>
+              ))}
             </>
           ) : !isMe && gameState?.stage && gameState.stage !== 'waiting' && player.status !== 'bust' && player.status !== 'folded' && player.status !== 'sitting_out' ? (
             <>

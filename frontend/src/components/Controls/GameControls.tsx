@@ -142,6 +142,35 @@ export function GameControls() {
   const hasCards = myPlayer.hole_cards && myPlayer.hole_cards.length > 0;
   const canAct = isMyTurn && myPlayer.status === 'active' && hasCards;
 
+  // AFK/sitting_out player: show return button
+  if (myPlayer.away || myPlayer.status === 'sitting_out') {
+    return (
+      <motion.div
+        className="game-controls"
+        initial={{ y: 100, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.3 }}
+      >
+        <div className="controls-main">
+          <div className="controls-secondary" style={{ opacity: 1 }}>
+            <button
+              className="control-btn-small"
+              onClick={async () => {
+                try {
+                  await api.setAway(tableId!, { session_id: sessionId, away: false });
+                } catch (e) {
+                  console.error(e);
+                }
+              }}
+            >
+              🔙 Вернуться в игру
+            </button>
+          </div>
+        </div>
+      </motion.div>
+    );
+  }
+
   if (!inActiveHand || myPlayer.status === 'bust' || myPlayer.status === 'folded' || !hasCards) return null;
 
   // Reset raise slider when turn/round changes
