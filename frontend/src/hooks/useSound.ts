@@ -10,7 +10,7 @@ const SOUND_VARIANTS: Record<string, number> = {
   card_received: 1,
   your_turn: 1,
   fold: 1,
-  check: 2,
+  check: 1,
   allin: 2,
   raise: 1,
   win: 1,
