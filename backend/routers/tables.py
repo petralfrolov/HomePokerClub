@@ -100,6 +100,15 @@ async def _start_turn_timer(table_id: str, game):
                 actual_action = "fold"
             elif k in ("checked",):
                 actual_action = "check"
+
+        # Auto-fold → mark player as AFK so next turns skip them too
+        if actual_action == "fold":
+            current_player.away = True
+            await ws_manager.broadcast_all(table_id, "player_away", {
+                "player_id": current_player.player_id,
+                "away": True,
+            })
+
         await ws_manager.broadcast_all(table_id, "action_made", {
             "player_id": current_player.player_id,
             "action": actual_action,
