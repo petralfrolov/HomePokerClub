@@ -13,10 +13,12 @@ export function PlayerContextMenu({ player, onClose }: Props) {
   const sessionId = useStore((s) => s.sessionId);
   const tableId = useStore((s) => s.tableId);
   const gameState = useStore((s) => s.gameState);
+  const tableConfig = useStore((s) => s.tableConfig);
   const [tipAmount, setTipAmount] = useState('');
   const [showTipInput, setShowTipInput] = useState(false);
 
   const isTargetTurn = gameState?.current_player_seat === player.seat_index;
+  const isAdmin = tableConfig?.admin_session_id === sessionId;
 
   async function handleTip() {
     if (!tableId || !tipAmount) return;
@@ -39,6 +41,20 @@ export function PlayerContextMenu({ player, onClose }: Props) {
     if (!tableId) return;
     try {
       await api.accuseStalling(tableId, {
+        session_id: sessionId,
+        target_player_id: player.player_id,
+      });
+      onClose();
+    } catch (e: any) {
+      alert(e.message);
+    }
+  }
+
+  async function handleKick() {
+    if (!tableId) return;
+    if (!confirm(`Кикнуть ${player.nickname}? Будет выполнен принудительный кэшаут.`)) return;
+    try {
+      await api.kickPlayer(tableId, {
         session_id: sessionId,
         target_player_id: player.player_id,
       });
@@ -75,6 +91,11 @@ export function PlayerContextMenu({ player, onClose }: Props) {
         {isTargetTurn && (
           <button className="context-menu-item" onClick={handleAccuseStalling}>
             ⏱ Упрекнуть в столлинге
+          </button>
+        )}
+        {isAdmin && (
+          <button className="context-menu-item context-menu-item-danger" onClick={handleKick}>
+            ❌ Кикнуть
           </button>
         )}
       </div>

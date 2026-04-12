@@ -15,8 +15,22 @@ export function Lobby() {
   const nickname = useStore((s) => s.nickname);
   const setNickname = useStore((s) => s.setNickname);
   const sessionId = useStore((s) => s.sessionId);
+  const kickedCashout = useStore((s) => s.kickedCashout);
+  const clearKicked = useStore((s) => s.clearKicked);
   const [nickInput, setNickInput] = useState(nickname);
+  const [editingNick, setEditingNick] = useState(false);
+  const [kickMessage, setKickMessage] = useState<string | null>(null);
   const navigate = useNavigate();
+
+  // Show kick notification
+  useEffect(() => {
+    if (kickedCashout !== null) {
+      setKickMessage(`Вы были кикнуты со стола. Кэшаут: ${kickedCashout}`);
+      clearKicked();
+      const timer = setTimeout(() => setKickMessage(null), 6000);
+      return () => clearTimeout(timer);
+    }
+  }, [kickedCashout, clearKicked]);
 
   useEffect(() => {
     loadTables();
@@ -43,6 +57,12 @@ export function Lobby() {
 
   return (
     <div className="lobby">
+      {kickMessage && (
+        <div className="kick-banner">
+          {kickMessage}
+          <button className="kick-banner-close" onClick={() => setKickMessage(null)}>✕</button>
+        </div>
+      )}
       <div className="lobby-header">
         <h2>Лобби</h2>
         {!nickname ? (
@@ -59,7 +79,43 @@ export function Lobby() {
           </div>
         ) : (
           <div className="nick-display">
-            <span>👤 {nickname}</span>
+            {editingNick ? (
+              <div className="nick-form">
+                <input
+                  type="text"
+                  placeholder="Новый ник"
+                  maxLength={20}
+                  value={nickInput}
+                  onChange={(e) => setNickInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      if (nickInput.trim().length > 0 && nickInput.trim().length <= 20) {
+                        setNickname(nickInput.trim());
+                      }
+                      setEditingNick(false);
+                    } else if (e.key === 'Escape') {
+                      setNickInput(nickname);
+                      setEditingNick(false);
+                    }
+                  }}
+                  onBlur={() => {
+                    if (nickInput.trim().length > 0 && nickInput.trim().length <= 20) {
+                      setNickname(nickInput.trim());
+                    }
+                    setEditingNick(false);
+                  }}
+                  autoFocus
+                />
+              </div>
+            ) : (
+              <span
+                className="nick-display-name"
+                onClick={() => { setNickInput(nickname); setEditingNick(true); }}
+                title="Нажмите, чтобы изменить ник"
+              >
+                👤 {nickname} ✏️
+              </span>
+            )}
             <button className="btn-primary" onClick={() => setShowCreate(true)}>
               + Создать стол
             </button>

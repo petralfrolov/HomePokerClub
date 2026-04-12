@@ -30,6 +30,12 @@ export interface CashoutLedgerEntry {
   current_stack: number;
 }
 
+export interface GameLogEntry {
+  time: string;
+  round: number;
+  message: string;
+}
+
 export interface GameState {
   table_id: string;
   round_number: number;
@@ -45,6 +51,7 @@ export interface GameState {
   players: PlayerInfo[];
   cashout_ledger?: CashoutLedgerEntry[];
   frol_total_tips?: number;
+  game_log?: GameLogEntry[];
 }
 
 export interface TableConfig {

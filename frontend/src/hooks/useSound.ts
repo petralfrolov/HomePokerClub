@@ -3,36 +3,45 @@ import { useStore } from '../store/useStore';
 
 const sounds: Record<string, Howl> = {};
 
-const SOUND_FILES: Record<string, string> = {
-  card_received: '/sounds/card_received.mp3',
-  your_turn: '/sounds/your_turn.mp3',
-  fold: '/sounds/fold.mp3',
-  check: '/sounds/check.mp3',
-  allin: '/sounds/allin.mp3',
-  raise: '/sounds/raise.mp3',
-  win: '/sounds/win.mp3',
-  lose: '/sounds/lose.mp3',
-  stalling: '/sounds/stalling.mp3',
-  blinds_up: '/sounds/blinds_up.mp3',
-  rebuy: '/sounds/rebuy.mp3',
+// Map sound name → list of numbered file variants
+const SOUND_VARIANTS: Record<string, number> = {
+  card_received: 1,
+  your_turn: 1,
+  fold: 1,
+  check: 3,
+  allin: 1,
+  raise: 1,
+  win: 1,
+  lose: 1,
+  stalling: 1,
+  blinds_up: 1,
+  rebuy: 1,
+  kick: 1,
 };
 
-function getSound(name: string): Howl {
-  if (!sounds[name]) {
-    sounds[name] = new Howl({
-      src: [SOUND_FILES[name] || `/sounds/${name}.mp3`],
+function getSoundFile(name: string): string {
+  const count = SOUND_VARIANTS[name] || 1;
+  const variant = Math.floor(Math.random() * count) + 1;
+  return `/sounds/${name}_${variant}.mp3`;
+}
+
+function getSound(name: string, file: string): Howl {
+  if (!sounds[file]) {
+    sounds[file] = new Howl({
+      src: [file],
       volume: 0.7,
       preload: true,
     });
   }
-  return sounds[name];
+  return sounds[file];
 }
 
 export function playSound(name: string) {
   const state = useStore.getState();
   if (state.soundMuted) return;
 
-  const sound = getSound(name);
+  const file = getSoundFile(name);
+  const sound = getSound(name, file);
   sound.volume(state.soundVolume);
   sound.play();
 }

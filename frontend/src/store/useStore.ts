@@ -79,6 +79,15 @@ interface AppState {
   stallingAccused: boolean;
   setStallingAccused: (v: boolean) => void;
 
+  // Kicked from table
+  kickedCashout: number | null;
+  setKicked: (cashout: number) => void;
+  clearKicked: () => void;
+
+  // Kicked overlay (shown to kicked player)
+  showKickedOverlay: boolean;
+  setShowKickedOverlay: (v: boolean) => void;
+
   // UI
   soundVolume: number;
   soundMuted: boolean;
@@ -127,6 +136,13 @@ export const useStore = create<AppState>((set) => ({
 
   stallingAccused: false,
   setStallingAccused: (v) => set({ stallingAccused: v }),
+
+  kickedCashout: null,
+  setKicked: (cashout) => set({ kickedCashout: cashout }),
+  clearKicked: () => set({ kickedCashout: null }),
+
+  showKickedOverlay: false,
+  setShowKickedOverlay: (v) => set({ showKickedOverlay: v }),
 
   soundVolume: 0.7,
   soundMuted: false,

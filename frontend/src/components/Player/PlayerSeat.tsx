@@ -14,13 +14,20 @@ interface Props {
 }
 
 // Calculate position on ellipse, avoiding top zone (dealer area)
+// Index 0 = current player, positioned at bottom center
 function getSeatPosition(index: number, total: number): { left: string; top: string } {
   // Leave ~80° gap at the top for the dealer
   const GAP = Math.PI * 0.44;
   const arc = 2 * Math.PI - GAP;
-  const start = -Math.PI / 2 + GAP / 2;
   const step = arc / Math.max(total, 1);
-  const angle = start + step * (index + 0.5);
+  // Parametric distance clockwise from bottom (π/2)
+  const t = step * index;
+  // Clockwise distance from bottom to right edge of the dealer gap
+  const gapThreshold = Math.PI - GAP / 2;
+  // When t crosses the gap, skip over it
+  const angle = t < gapThreshold
+    ? Math.PI / 2 - t
+    : Math.PI / 2 - t - GAP;
 
   const rx = 48;
   const ry = 42;

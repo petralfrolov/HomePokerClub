@@ -5,6 +5,7 @@ import { playSound } from './useSound';
 
 export function useWebSocket(tableId: string | null) {
   const wsRef = useRef<WebSocket | null>(null);
+  const intentionalClose = useRef(false);
   const sessionId = useStore((s) => s.sessionId);
   const setGameState = useStore((s) => s.setGameState);
   const setFrolTipRequest = useStore((s) => s.setFrolTipRequest);
@@ -38,8 +39,10 @@ export function useWebSocket(tableId: string | null) {
 
     ws.onclose = () => {
       console.log('WS disconnected');
-      // Reconnect after 2 seconds
-      setTimeout(() => connect(), 2000);
+      // Reconnect after 2 seconds, unless intentionally closed
+      if (!intentionalClose.current) {
+        setTimeout(() => connect(), 2000);
+      }
     };
 
     // Keepalive
@@ -112,11 +115,24 @@ export function useWebSocket(tableId: string | null) {
         setCashoutPending(true);
         break;
       case 'table_deleted': {
+        intentionalClose.current = true;
         useStore.getState().setTableId(null);
         useStore.getState().setGameState(null);
-        // Close WS to prevent reconnect loop
         wsRef.current?.close();
-        // Navigate to lobby — handled by the component via tableId becoming null
+        break;
+      }
+      case 'you_were_kicked': {
+        intentionalClose.current = true;
+        wsRef.current?.close();
+        useStore.getState().setShowKickedOverlay(true);
+        playSound('kick');
+        setTimeout(() => {
+          useStore.getState().setShowKickedOverlay(false);
+          useStore.getState().setTableId(null);
+          useStore.getState().setTableConfig(null);
+          useStore.getState().setGameState(null);
+          useStore.getState().setKicked(data.cashout ?? 0);
+        }, 3000);
         break;
       }
       case 'stalling_accused': {
@@ -169,6 +185,17 @@ export function useWebSocket(tableId: string | null) {
       case 'player_avatar_updated':
         // These events trigger game_state refresh from server
         break;
+      case 'player_kicked': {
+        // Immediately remove kicked player from local game state for all remaining clients
+        const currentState = useStore.getState().gameState;
+        if (currentState) {
+          setGameState({
+            ...currentState,
+            players: currentState.players.filter((p) => p.player_id !== data.player_id),
+          });
+        }
+        break;
+      }
       default:
         console.log('Unknown WS event:', data.event);
     }

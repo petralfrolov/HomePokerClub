@@ -140,6 +140,11 @@ class AwayStatus(BaseModel):
 
 # ---------- Frol ----------
 
+class KickPlayer(BaseModel):
+    session_id: str  # admin's session
+    target_player_id: str
+
+
 class FrolTip(BaseModel):
     session_id: str
     amount: int = Field(..., gt=0)

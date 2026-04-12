@@ -13,7 +13,7 @@ from backend.database import get_db
 from backend.models.tables import Table, Player, Session, GameRound, RoundAction
 from backend.schemas.schemas import (
     TableCreate, TableCreated, TableSummary, TableDetail,
-    PlayerInfo, JoinTable, JoinResult, LeaveTable, CashoutRequest, OkResponse,
+    PlayerInfo, JoinTable, JoinResult, LeaveTable, CashoutRequest, KickPlayer, OkResponse,
 )
 from backend.services.game_engine import game_engine, GameState, PlayerState
 from backend.ws.manager import manager as ws_manager
@@ -372,5 +372,88 @@ async def cashout(table_id: str, body: CashoutRequest, db: AsyncSession = Depend
                 game.current_player_index = game_engine._next_betting_seat(game, game.current_player_index)
                 await _start_turn_timer(table_id, game)
         await _broadcast_game_state(table_id, game)
+
+    return OkResponse()
+
+
+@router.post("/{table_id}/kick", response_model=OkResponse)
+async def kick_player(table_id: str, body: KickPlayer, db: AsyncSession = Depends(get_db)):
+    """Admin kicks a player (forced cashout)."""
+    # Verify admin
+    result = await db.execute(select(Table).where(Table.id == table_id))
+    table = result.scalar_one_or_none()
+    if not table:
+        raise HTTPException(404, "Table not found")
+    if table.admin_session_id != body.session_id:
+        raise HTTPException(403, "Only admin can kick players")
+
+    game = game_engine.get_game(table_id)
+    if not game:
+        raise HTTPException(404, "Game not found")
+
+    player_state = game.get_player_by_id(body.target_player_id)
+    if not player_state:
+        raise HTTPException(404, "Player not found")
+
+    # Cannot kick yourself
+    if player_state.session_id == body.session_id:
+        raise HTTPException(400, "Cannot kick yourself")
+
+    # If the player is in an active hand, fold them first
+    if game.stage not in ("waiting",) and player_state.status in ("active", "allin"):
+        if player_state.status == "active":
+            player_state.status = "folded"
+            await ws_manager.broadcast_all(table_id, "action_made", {
+                "player_id": player_state.player_id,
+                "action": "fold",
+                "amount": None,
+            })
+        elif player_state.status == "allin":
+            player_state.status = "folded"
+
+        from backend.routers.tables import _check_hand_end
+        from backend.services.timer import timer_manager
+        timer_manager.cancel_timer(table_id)
+        advance_result = game_engine._try_advance(game)
+        if advance_result:
+            result_dict = {"advance": advance_result}
+            await _check_hand_end(table_id, game, result_dict)
+
+    cashout_amount = player_state.stack
+    player_state.total_cashout += cashout_amount
+
+    game.cashout_ledger.append({
+        "nickname": player_state.nickname,
+        "total_buyin": player_state.total_buyin,
+        "total_cashout": player_state.total_cashout,
+        "current_stack": 0,
+    })
+
+    # Remove from DB
+    db_result = await db.execute(
+        select(Player).where(Player.table_id == table_id, Player.session_id == player_state.session_id)
+    )
+    db_player = db_result.scalar_one_or_none()
+    if db_player:
+        await db.delete(db_player)
+        await db.commit()
+
+    kicked_session_id = player_state.session_id
+    game_engine.remove_player(table_id, kicked_session_id)
+
+    await ws_manager.broadcast_all(table_id, "player_kicked", {
+        "player_id": body.target_player_id,
+        "cashout": cashout_amount,
+    })
+
+    # Notify the kicked player specifically
+    await ws_manager.send_personal(table_id, kicked_session_id, "you_were_kicked", {
+        "cashout": cashout_amount,
+    })
+
+    # Broadcast updated game state
+    for p in game.players:
+        snapshot = game_engine.get_game_snapshot(game, for_session_id=p.session_id)
+        await ws_manager.send_personal(table_id, p.session_id, "game_state", snapshot)
 
     return OkResponse()

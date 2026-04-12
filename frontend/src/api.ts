@@ -45,6 +45,12 @@ export const api = {
       body: JSON.stringify({ session_id }),
     }),
 
+  kickPlayer: (tableId: string, data: { session_id: string; target_player_id: string }) =>
+    request<any>(`/tables/${tableId}/kick`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
   // Game
   startGame: (tableId: string, session_id: string) =>
     request<any>(`/tables/${tableId}/start`, {

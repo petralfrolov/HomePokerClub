@@ -208,7 +208,7 @@
   padding: 0.8rem 1rem;
   z-index: 100;
   min-width: 220px;
-  max-width: 320px;
+  max-width: 360px;
   backdrop-filter: blur(8px);
 }
 
@@ -219,6 +219,91 @@
   margin-bottom: 0.5rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  user-select: none;
+}
+
+.cashout-ledger-title:hover {
+  color: #fff;
+}
+
+.ledger-toggle {
+  font-size: 0.7rem;
+  opacity: 0.7;
+}
+
+.cashout-ledger.collapsed {
+  min-width: auto;
+}
+
+.cashout-ledger.collapsed .cashout-ledger-title {
+  margin-bottom: 0;
+}
+
+/* Game log */
+.game-log-section {
+  margin-top: 0.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: 0.5rem;
+}
+
+.game-log-title {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-accent);
+  margin-bottom: 0.3rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.game-log-entries {
+  max-height: 200px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.game-log-entries::-webkit-scrollbar {
+  width: 4px;
+}
+
+.game-log-entries::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+}
+
+.game-log-entry {
+  display: flex;
+  gap: 0.4rem;
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  padding: 1px 0;
+}
+
+.game-log-entry.log-separator {
+  color: var(--text-accent);
+  font-weight: 600;
+  margin-top: 0.2rem;
+}
+
+.game-log-entry.log-winner {
+  color: #27ae60;
+  font-weight: 600;
+}
+
+.log-time {
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 0.65rem;
+  min-width: 45px;
+  flex-shrink: 0;
+}
+
+.log-message {
+  flex: 1;
 }
 
 .cashout-ledger-row {
@@ -287,4 +372,15 @@
     2px 2px 8px rgba(0, 0, 0, 0.8);
   letter-spacing: 0.05em;
   user-select: none;
+}
+
+.kicked-overlay {
+  background: rgba(120, 0, 0, 0.75);
+}
+
+.kicked-text {
+  text-shadow:
+    0 0 40px rgba(255, 50, 50, 1),
+    0 0 80px rgba(255, 0, 0, 0.7),
+    2px 2px 8px rgba(0, 0, 0, 0.9);
 }

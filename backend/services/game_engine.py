@@ -107,6 +107,9 @@ class GameState:
     # Last activity timestamp (used for idle table cleanup)
     last_activity_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
+    # Game action log (recent entries for display in ledger)
+    game_log: list[dict[str, Any]] = field(default_factory=list)
+
     def active_players(self) -> list[PlayerState]:
         return [p for p in self.players if p.status in ("active", "allin")]
 
@@ -124,6 +127,16 @@ class GameState:
             if p.player_id == player_id:
                 return p
         return None
+
+    def add_log(self, message: str) -> None:
+        """Add a log entry to the game log (keep last 100)."""
+        self.game_log.append({
+            "time": datetime.now(timezone.utc).strftime("%H:%M:%S"),
+            "round": self.round_number,
+            "message": message,
+        })
+        if len(self.game_log) > 100:
+            self.game_log = self.game_log[-100:]
 
 
 class GameEngine:
@@ -221,6 +234,8 @@ class GameEngine:
         events["dealer_seat"] = state.dealer_seat_index
         events["danilka_event"] = danilka_event
 
+        state.add_log(f"--- Раздача #{state.round_number} ---")
+
         sb_player = self._player_at_seat(state, sb_index)
         bb_player = self._player_at_seat(state, bb_index)
 
@@ -228,6 +243,7 @@ class GameEngine:
             sb_amount = min(state.blind_small, sb_player.stack)
             self._place_bet(sb_player, sb_amount)
             events["sb"] = {"player_id": sb_player.player_id, "amount": sb_amount}
+            state.add_log(f"{sb_player.nickname} ставит МБ: {sb_amount}")
             if sb_player.stack == 0:
                 sb_player.status = "allin"
 
@@ -235,6 +251,7 @@ class GameEngine:
             bb_amount = min(state.blind_big, bb_player.stack)
             self._place_bet(bb_player, bb_amount)
             events["bb"] = {"player_id": bb_player.player_id, "amount": bb_amount}
+            state.add_log(f"{bb_player.nickname} ставит ББ: {bb_amount}")
             if bb_player.stack == 0:
                 bb_player.status = "allin"
 
@@ -376,6 +393,17 @@ class GameEngine:
 
         player.has_acted_this_round = True
 
+        # Log the action
+        ACTION_NAMES = {
+            "fold": "фолд", "check": "чек", "call": "колл",
+            "raise": "рейз", "allin": "олл-ин",
+        }
+        action_name = ACTION_NAMES.get(action, action)
+        if action in ("call", "raise", "allin") and result.get("amount"):
+            state.add_log(f"{player.nickname}: {action_name} {result['amount']}")
+        else:
+            state.add_log(f"{player.nickname}: {action_name}")
+
         # Check if round is over
         advance_result = self._try_advance(state)
         if advance_result:
@@ -441,6 +469,10 @@ class GameEngine:
         state.stage = next_stage
 
         result: dict[str, Any] = {"new_stage": next_stage}
+
+        STAGE_NAMES = {"flop": "Флоп", "turn": "Тёрн", "river": "Ривер", "showdown": "Шоудаун"}
+        stage_label = STAGE_NAMES.get(next_stage, next_stage)
+        state.add_log(f"--- {stage_label} ---")
 
         # Danilka event: cancel on turn
         if state.danilka_event_this_round and next_stage == "turn":
@@ -509,6 +541,7 @@ class GameEngine:
             winner.stack += state.pot
             result["winners"] = [{"player_id": winner.player_id, "amount": state.pot}]
             result["pot"] = state.pot
+            state.add_log(f"{winner.nickname} забирает банк {state.pot}")
         elif showdown:
             winners_info = self._resolve_showdown(state, active)
             result["winners"] = winners_info
@@ -524,6 +557,22 @@ class GameEngine:
                 for p in active
             }
             result["pot"] = state.pot
+            # Log showdown hands and winners
+            state.add_log("--- Шоудаун ---")
+            for p in active:
+                if len(p.hole_cards) == 2 and len(state.community_cards) >= 3:
+                    try:
+                        rank = evaluator.evaluate(p.hole_cards, state.community_cards)
+                        rank_class = evaluator.get_rank_class(rank)
+                        hand_name = HAND_CLASS_NAMES_RU.get(rank_class, "")
+                        cards_str = " ".join(Card.int_to_str(c) for c in p.hole_cards)
+                        state.add_log(f"{p.nickname}: [{cards_str}] — {hand_name}")
+                    except Exception:
+                        pass
+            for w in winners_info:
+                wp = state.get_player_by_id(w["player_id"])
+                if wp:
+                    state.add_log(f"🏆 {wp.nickname} выигрывает {w['amount']}")
 
         result["community_cards"] = [Card.int_to_str(c) for c in state.community_cards]
 
@@ -750,6 +799,9 @@ class GameEngine:
         # Frol tip total
         if state.dealer_type == "frol":
             snapshot["frol_total_tips"] = state.frol_total_tips
+
+        # Game action log
+        snapshot["game_log"] = state.game_log[-50:]
 
         return snapshot
 
