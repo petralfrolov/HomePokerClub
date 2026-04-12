@@ -16,7 +16,7 @@ export interface PlayerInfo {
   seat_index: number;
   stack: number;
   bet: number;
-  status: 'active' | 'folded' | 'allin' | 'bust' | 'away';
+  status: 'active' | 'folded' | 'allin' | 'bust' | 'away' | 'sitting_out';
   away: boolean;
   hole_cards: string[] | null;
   revealed_cards: string[];

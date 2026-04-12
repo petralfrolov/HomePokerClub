@@ -167,6 +167,7 @@ export function useWebSocket(tableId: string | null) {
         break;
       }
       case 'action_made': {
+        if (data.auto) break;
         const act = data.action;
         if (act === 'fold') playSound('fold');
         else if (act === 'check') playSound('check');

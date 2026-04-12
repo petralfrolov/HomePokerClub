@@ -183,7 +183,7 @@ export function PlayerSeat({ player, totalPlayers, index }: Props) {
                 <CardDisplay card="" size="small" faceDown />
               )}
             </>
-          ) : !isMe && gameState?.stage && gameState.stage !== 'waiting' && player.status !== 'bust' && player.status !== 'folded' ? (
+          ) : !isMe && gameState?.stage && gameState.stage !== 'waiting' && player.status !== 'bust' && player.status !== 'folded' && player.status !== 'sitting_out' ? (
             <>
               {[0, 1].map((i) => (
                 <motion.div

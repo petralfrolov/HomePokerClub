@@ -191,7 +191,7 @@ class GameEngine:
             if p.stack <= 0:
                 p.status = "bust"
             elif p.away:
-                p.status = "active"
+                p.status = "sitting_out"
             else:
                 p.status = "active"
             p.hole_cards = []
@@ -200,7 +200,7 @@ class GameEngine:
             p.revealed_cards = []
             p.has_acted_this_round = False
 
-        active = [p for p in state.players if p.status != "bust"]
+        active = [p for p in state.players if p.status == "active"]
         if len(active) < 2:
             state.stage = "waiting"
             return {"type": "insufficient_players"}
@@ -271,7 +271,7 @@ class GameEngine:
     def _deal_danilka_strong_hands(self, state: GameState) -> None:
         """Deal only strong starting hands for Danilka event, avoiding duplicate cards."""
         suits = "shdc"
-        active = [p for p in state.players if p.status != "bust"]
+        active = [p for p in state.players if p.status == "active"]
         dealt_cards: set[int] = set()
 
         for p in active:
@@ -684,7 +684,7 @@ class GameEngine:
         player.total_bet_this_hand += actual
 
     def _next_active_seat(self, state: GameState, current_seat: int) -> int:
-        seats = sorted(p.seat_index for p in state.players if p.status not in ("bust",))
+        seats = sorted(p.seat_index for p in state.players if p.status not in ("bust", "sitting_out"))
         if not seats:
             return current_seat
         idx = 0

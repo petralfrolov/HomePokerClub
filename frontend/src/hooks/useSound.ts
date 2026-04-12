@@ -9,7 +9,7 @@ const SOUND_VARIANTS: Record<string, number> = {
   your_turn: 1,
   fold: 1,
   check: 3,
-  allin: 1,
+  allin: 2,
   raise: 1,
   win: 1,
   lose: 1,
