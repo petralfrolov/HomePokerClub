@@ -171,7 +171,7 @@ export function GameControls() {
     );
   }
 
-  if (!inActiveHand || myPlayer.status === 'bust' || myPlayer.status === 'folded' || !hasCards) return null;
+  if (!inActiveHand || myPlayer.status === 'folded' || !hasCards) return null;
 
   // Reset raise slider when turn/round changes
   const turnKey = `${gameState.round_number}-${gameState.current_player_seat}`;

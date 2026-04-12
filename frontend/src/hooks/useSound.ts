@@ -1,11 +1,22 @@
 import { Howl } from 'howler';
 import { useStore } from '../store/useStore';
 
-const sounds: Record<string, Howl> = {};
-const lastPlayed: Record<string, number> = {};
-const DEDUP_MS = 500;
+// Import all sound files via glob — Vite adds a content hash to each filename,
+// so browsers automatically invalidate the cache whenever a file changes.
+const soundModules = import.meta.glob('../assets/sounds/*.mp3', {
+  eager: true,
+  query: '?url',
+  import: 'default',
+}) as Record<string, string>;
 
-// Map sound name → list of numbered file variants
+// Build a lookup: "check_1" → hashed URL like "/assets/sounds/check_1.a3f8b2.mp3"
+const SOUND_URLS: Record<string, string> = {};
+for (const [filePath, url] of Object.entries(soundModules)) {
+  const key = filePath.replace(/.*\//, '').replace(/\.mp3$/, ''); // e.g. "check_1"
+  SOUND_URLS[key] = url;
+}
+
+// Map sound name → number of numbered file variants
 const SOUND_VARIANTS: Record<string, number> = {
   card_received: 1,
   your_turn: 1,
@@ -22,21 +33,33 @@ const SOUND_VARIANTS: Record<string, number> = {
   kick: 1,
 };
 
-function getSoundFile(name: string): string {
+const sounds: Record<string, Howl> = {};
+const lastPlayed: Record<string, number> = {};
+const DEDUP_MS = 500;
+
+function getSoundUrl(name: string): string {
   const count = SOUND_VARIANTS[name] || 1;
   const variant = Math.floor(Math.random() * count) + 1;
-  return `/sounds/${name}_${variant}.mp3`;
+  const key = `${name}_${variant}`;
+  return SOUND_URLS[key] ?? `/sounds/${name}_${variant}.mp3`;
 }
 
-function getSound(name: string, file: string): Howl {
-  if (!sounds[file]) {
-    sounds[file] = new Howl({
-      src: [file],
+function getSound(url: string): Howl {
+  if (!sounds[url]) {
+    sounds[url] = new Howl({
+      src: [url],
       volume: 0.7,
       preload: true,
+      onloaderror: (_id, err) => {
+        console.error(`Sound load error [${url}]:`, err);
+        delete sounds[url];
+      },
+      onplayerror: (_id, err) => {
+        console.error(`Sound play error [${url}]:`, err);
+      },
     });
   }
-  return sounds[file];
+  return sounds[url];
 }
 
 export function playSound(name: string) {
@@ -47,8 +70,8 @@ export function playSound(name: string) {
   if (lastPlayed[name] && now - lastPlayed[name] < DEDUP_MS) return;
   lastPlayed[name] = now;
 
-  const file = getSoundFile(name);
-  const sound = getSound(name, file);
+  const url = getSoundUrl(name);
+  const sound = getSound(url);
   sound.volume(state.soundVolume);
   sound.play();
 }
