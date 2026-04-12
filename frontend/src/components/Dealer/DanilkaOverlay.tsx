@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion';
+import { S } from '../../strings';
 import './Dealer.css';
 
 export function DanilkaOverlay() {
@@ -16,8 +17,8 @@ export function DanilkaOverlay() {
         transition={{ type: 'spring', stiffness: 200 }}
       >
         <div className="danilka-icon">🃏</div>
-        <h2>Ой, карты выпали!</h2>
-        <p>Перераздача!</p>
+        <h2>{S.cardsDropped}</h2>
+        <p>{S.redeal}</p>
       </motion.div>
 
       {/* Scattered cards animation */}

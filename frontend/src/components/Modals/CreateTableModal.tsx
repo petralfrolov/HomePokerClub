@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useStore } from '../../store/useStore';
 import { api } from '../../api';
+import { S } from '../../strings';
 import './Modals.css';
 
 interface Props {
@@ -26,7 +27,7 @@ export function CreateTableModal({ onClose, onCreated }: Props) {
 
   async function handleCreate() {
     if (!name.trim()) {
-      setError('Введите название стола');
+      setError(S.enterTableName);
       return;
     }
     setLoading(true);
@@ -63,24 +64,24 @@ export function CreateTableModal({ onClose, onCreated }: Props) {
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <h3>Создать стол</h3>
+        <h3>{S.createTableTitle}</h3>
 
         <div className="form-group">
-          <label>Название стола</label>
+          <label>{S.tableNameLabel}</label>
           <input value={name} onChange={(e) => setName(e.target.value)} maxLength={50} />
         </div>
 
         <div className="form-group">
-          <label>Тип игры</label>
+          <label>{S.gameTypeLabel}</label>
           <select value={type} onChange={(e) => setType(e.target.value as any)}>
-            <option value="cash">Кэш-игра</option>
-            <option value="tournament">Мини-турнир</option>
+            <option value="cash">{S.cashGame}</option>
+            <option value="tournament">{S.miniTournament}</option>
           </select>
         </div>
 
         <div className="form-row">
           <div className="form-group">
-            <label>Малый блайнд</label>
+            <label>{S.smallBlindLabel}</label>
             <input
               type="number"
               min={1}
@@ -93,7 +94,7 @@ export function CreateTableModal({ onClose, onCreated }: Props) {
             />
           </div>
           <div className="form-group">
-            <label>Большой блайнд</label>
+            <label>{S.bigBlindLabel}</label>
             <input
               type="number"
               min={1}
@@ -105,7 +106,7 @@ export function CreateTableModal({ onClose, onCreated }: Props) {
 
         <div className="form-row">
           <div className="form-group">
-            <label>Время на ход (сек)</label>
+            <label>{S.timePerMoveLabel}</label>
             <input
               type="number"
               min={10}
@@ -115,7 +116,7 @@ export function CreateTableModal({ onClose, onCreated }: Props) {
             />
           </div>
           <div className="form-group">
-            <label>Запас на раздумья (сек)</label>
+            <label>{S.timeBankLabel}</label>
             <input
               type="number"
               min={60}
@@ -127,18 +128,18 @@ export function CreateTableModal({ onClose, onCreated }: Props) {
         </div>
 
         <div className="form-group">
-          <label>Дилер</label>
+          <label>{S.dealerLabel}</label>
           <select value={dealerType} onChange={(e) => setDealerType(e.target.value as any)}>
-            <option value="robot">🤖 Робот</option>
-            <option value="frol">😏 Фрол</option>
-            <option value="danilka">🃏 Данилка</option>
+            <option value="robot">{S.dealerRobot}</option>
+            <option value="frol">{S.dealerFrol}</option>
+            <option value="danilka">{S.dealerDanilka}</option>
           </select>
         </div>
 
         {type === 'cash' ? (
           <div className="form-row">
             <div className="form-group">
-              <label>Мин. байин</label>
+              <label>{S.minBuyinLabel}</label>
               <input
                 type="number"
                 min={1}
@@ -147,7 +148,7 @@ export function CreateTableModal({ onClose, onCreated }: Props) {
               />
             </div>
             <div className="form-group">
-              <label>Макс. байин</label>
+              <label>{S.maxBuyinLabel}</label>
               <input
                 type="number"
                 min={1}
@@ -159,7 +160,7 @@ export function CreateTableModal({ onClose, onCreated }: Props) {
         ) : (
           <div className="form-row">
             <div className="form-group">
-              <label>Стартовый стек</label>
+              <label>{S.startingStackLabel}</label>
               <input
                 type="number"
                 min={1}
@@ -168,7 +169,7 @@ export function CreateTableModal({ onClose, onCreated }: Props) {
               />
             </div>
             <div className="form-group">
-              <label>Повышение блайндов (раздач)</label>
+              <label>{S.blindIntervalLabel}</label>
               <input
                 type="number"
                 min={1}
@@ -182,9 +183,9 @@ export function CreateTableModal({ onClose, onCreated }: Props) {
         {error && <div className="form-error">{error}</div>}
 
         <div className="modal-actions">
-          <button className="btn-secondary" onClick={onClose}>Отмена</button>
+          <button className="btn-secondary" onClick={onClose}>{S.cancel}</button>
           <button className="btn-primary" onClick={handleCreate} disabled={loading}>
-            {loading ? 'Создание...' : 'Создать'}
+            {loading ? S.creating : S.create}
           </button>
         </div>
       </div>

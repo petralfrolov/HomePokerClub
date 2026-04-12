@@ -4,6 +4,7 @@ import { useStore } from '../../store/useStore';
 import { useWebSocket } from '../../hooks/useWebSocket';
 import { playSound } from '../../hooks/useSound';
 import { api } from '../../api';
+import { S } from '../../strings';
 import { PokerTable } from './PokerTable';
 import { PlayerSeat } from '../Player/PlayerSeat';
 import { GameControls } from '../Controls/GameControls';
@@ -26,6 +27,7 @@ export function TableView() {
   const danilkaEvent = useStore((s) => s.danilkaEvent);
   const stallingAccused = useStore((s) => s.stallingAccused);
   const kickedCashout = useStore((s) => s.kickedCashout);
+  const clearAfkTable = useStore((s) => s.clearAfkTable);
   const [ledgerCollapsed, setLedgerCollapsed] = useState(false);
 
   useWebSocket(tableId || null);
@@ -40,6 +42,7 @@ export function TableView() {
   useEffect(() => {
     if (!tableId) return;
     setTableId(tableId);
+    clearAfkTable();
 
     api.getTable(tableId).then((data) => {
       setTableConfig(data);
@@ -79,7 +82,7 @@ export function TableView() {
   }
 
   async function handleCashout() {
-    if (!confirm('Вы уверены, что хотите сделать кэшаут и покинуть стол?')) return;
+    if (!confirm(S.cashoutConfirm)) return;
     try {
       await api.cashout(tableId!, sessionId);
       navigate('/');
@@ -88,8 +91,20 @@ export function TableView() {
     }
   }
 
-  // Build ledger: active players + cashed-out players
-  const ledgerEntries: CashoutLedgerEntry[] = gameState?.cashout_ledger || [];
+  // Build ledger: active players + cashed-out players, aggregated by nickname
+  const rawLedgerEntries: CashoutLedgerEntry[] = gameState?.cashout_ledger || [];
+  const ledgerMap = new Map<string, CashoutLedgerEntry>();
+  for (const entry of rawLedgerEntries) {
+    const existing = ledgerMap.get(entry.nickname);
+    if (existing) {
+      existing.total_buyin += entry.total_buyin;
+      existing.total_cashout += entry.total_cashout;
+      existing.current_stack += entry.current_stack;
+    } else {
+      ledgerMap.set(entry.nickname, { ...entry });
+    }
+  }
+  const ledgerEntries = Array.from(ledgerMap.values());
   const gameLogs: GameLogEntry[] = gameState?.game_log || [];
   const showLedger = ledgerEntries.length > 0 || gameLogs.length > 0;
 
@@ -97,20 +112,20 @@ export function TableView() {
     <div className="table-view">
       <div className="table-top-bar">
         <div className="table-info">
-          <span className="table-info-name">{tableConfig?.name || 'Стол'}</span>
+          <span className="table-info-name">{tableConfig?.name || S.tableFallback}</span>
           <span className="table-info-blinds">
-            Блайнды: {gameState?.blind_small || tableConfig?.blind_small}/{gameState?.blind_big || tableConfig?.blind_big}
+            {S.blindsLabel}: {gameState?.blind_small || tableConfig?.blind_small}/{gameState?.blind_big || tableConfig?.blind_big}
           </span>
           {gameState?.round_number ? (
-            <span className="table-info-round">Раздача #{gameState.round_number}</span>
+            <span className="table-info-round">{S.roundPrefix}{gameState.round_number}</span>
           ) : null}
         </div>
         <div className="table-actions-top">
           {isAdmin && isWaiting && sortedPlayers.length >= 2 && (
-            <button className="btn-primary" onClick={handleStart}>▶ Начать игру</button>
+            <button className="btn-primary" onClick={handleStart}>{S.startGame}</button>
           )}
           {tableConfig?.type === 'cash' && (
-            <button className="btn-cashout" onClick={handleCashout}>💰 Кэшаут</button>
+            <button className="btn-cashout" onClick={handleCashout}>{S.cashoutBtn}</button>
           )}
         </div>
       </div>
@@ -123,7 +138,7 @@ export function TableView() {
           {/* Pot */}
           <div className="pot-display">
             {(gameState?.pot || 0) > 0 && (
-              <span className="pot-amount">Банк: {gameState?.pot}</span>
+              <span className="pot-amount">{S.potDisplay}: {gameState?.pot}</span>
             )}
           </div>
 
@@ -150,7 +165,7 @@ export function TableView() {
       {/* Stalling overlay */}
       {stallingAccused && (
         <div className="stalling-overlay">
-          <span className="stalling-text">СТОЛЛИШЬ!</span>
+          <span className="stalling-text">{S.stallingOverlay}</span>
         </div>
       )}
 
@@ -158,7 +173,7 @@ export function TableView() {
       {showLedger && (
         <div className={`cashout-ledger ${ledgerCollapsed ? 'collapsed' : ''}`}>
           <div className="cashout-ledger-title" onClick={() => setLedgerCollapsed(!ledgerCollapsed)}>
-            <span>Леджер</span>
+            <span>{S.ledger}</span>
             <span className="ledger-toggle">{ledgerCollapsed ? '▲' : '▼'}</span>
           </div>
           {!ledgerCollapsed && (
@@ -169,10 +184,10 @@ export function TableView() {
                   <div key={i} className="cashout-ledger-row">
                     <span className="ledger-nick">{entry.nickname}</span>
                     <span className="ledger-detail">
-                      Ввод: {entry.total_buyin}
+                      {S.deposit}: {entry.total_buyin}
                     </span>
                     <span className="ledger-detail">
-                      Вывод: {entry.total_cashout}
+                      {S.withdrawal}: {entry.total_cashout}
                     </span>
                     <span className={`ledger-delta ${delta >= 0 ? 'positive' : 'negative'}`}>
                       {delta >= 0 ? '+' : ''}{delta}
@@ -182,13 +197,13 @@ export function TableView() {
               })}
               {(gameState?.frol_total_tips ?? 0) > 0 && (
                 <div className="cashout-ledger-row frol-tips-row">
-                  <span className="ledger-nick">🎩 Фрол (чаевые)</span>
+                  <span className="ledger-nick">{S.frolTips}</span>
                   <span className="ledger-delta positive">+{gameState!.frol_total_tips}</span>
                 </div>
               )}
               {gameLogs.length > 0 && (
                 <div className="game-log-section">
-                  <div className="game-log-title">Лог игры</div>
+                  <div className="game-log-title">{S.gameLogTitle}</div>
                   <div className="game-log-entries">
                     {gameLogs.map((log, i) => (
                       <div key={i} className={`game-log-entry ${log.message.startsWith('---') ? 'log-separator' : ''} ${log.message.startsWith('🏆') ? 'log-winner' : ''}`}>

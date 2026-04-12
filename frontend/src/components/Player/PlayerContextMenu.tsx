@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useStore } from '../../store/useStore';
 import { api } from '../../api';
 import { PlayerInfo } from '../../types';
+import { S } from '../../strings';
 import './Player.css';
 
 interface Props {
@@ -52,7 +53,7 @@ export function PlayerContextMenu({ player, onClose }: Props) {
 
   async function handleKick() {
     if (!tableId) return;
-    if (!confirm(`Кикнуть ${player.nickname}? Будет выполнен принудительный кэшаут.`)) return;
+    if (!confirm(S.kickConfirm(player.nickname))) return;
     try {
       await api.kickPlayer(tableId, {
         session_id: sessionId,
@@ -68,7 +69,7 @@ export function PlayerContextMenu({ player, onClose }: Props) {
     <div className="context-menu" onClick={(e) => e.stopPropagation()}>
       <div className="context-menu-header">
         <span className="context-menu-nickname">{player.nickname}</span>
-        <span className="context-menu-stack">Стек: {player.stack}</span>
+        <span className="context-menu-stack">{S.stackLabel}: {player.stack}</span>
       </div>
       <div className="context-menu-items">
         {showTipInput ? (
@@ -76,26 +77,26 @@ export function PlayerContextMenu({ player, onClose }: Props) {
             <input
               type="number"
               min={1}
-              placeholder="Сумма"
+              placeholder={S.amountPlaceholder}
               value={tipAmount}
               onChange={(e) => setTipAmount(e.target.value)}
               autoFocus
             />
-            <button onClick={handleTip}>Отправить</button>
+            <button onClick={handleTip}>{S.send}</button>
           </div>
         ) : (
           <button className="context-menu-item" onClick={() => setShowTipInput(true)}>
-            💰 Типнуть
+            {S.tipBtn}
           </button>
         )}
         {isTargetTurn && (
           <button className="context-menu-item" onClick={handleAccuseStalling}>
-            ⏱ Упрекнуть в столлинге
+            {S.accuseStalling}
           </button>
         )}
         {isAdmin && (
           <button className="context-menu-item context-menu-item-danger" onClick={handleKick}>
-            ❌ Кикнуть
+            {S.kickBtn}
           </button>
         )}
       </div>

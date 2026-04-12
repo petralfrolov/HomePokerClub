@@ -195,3 +195,27 @@
 .btn-delete-table:hover {
   background: rgba(231, 76, 60, 0.3);
 }
+
+/* AFK badge on table card */
+.table-card-mine {
+  border-color: var(--text-accent) !important;
+  box-shadow: 0 0 12px rgba(255, 215, 0, 0.15);
+}
+
+.table-card-afk-badge {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(255, 215, 0, 0.12);
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  border-radius: 8px;
+  padding: 0.4rem 0.7rem;
+  margin-top: 0.6rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-accent);
+}
+
+.afk-badge-stack {
+  font-variant-numeric: tabular-nums;
+}

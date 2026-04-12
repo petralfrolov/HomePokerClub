@@ -5,6 +5,7 @@ import { api } from '../../api';
 import { TableSummary } from '../../types';
 import { CreateTableModal } from '../Modals/CreateTableModal';
 import { JoinTableModal } from '../Modals/JoinTableModal';
+import { S } from '../../strings';
 import './Lobby.css';
 
 export function Lobby() {
@@ -17,6 +18,8 @@ export function Lobby() {
   const sessionId = useStore((s) => s.sessionId);
   const kickedCashout = useStore((s) => s.kickedCashout);
   const clearKicked = useStore((s) => s.clearKicked);
+  const afkTableId = useStore((s) => s.afkTableId);
+  const afkTableStack = useStore((s) => s.afkTableStack);
   const [nickInput, setNickInput] = useState(nickname);
   const [editingNick, setEditingNick] = useState(false);
   const [kickMessage, setKickMessage] = useState<string | null>(null);
@@ -25,7 +28,7 @@ export function Lobby() {
   // Show kick notification
   useEffect(() => {
     if (kickedCashout !== null) {
-      setKickMessage(`Вы были кикнуты со стола. Кэшаут: ${kickedCashout}`);
+      setKickMessage(S.kickedMessage(kickedCashout));
       clearKicked();
       const timer = setTimeout(() => setKickMessage(null), 6000);
       return () => clearTimeout(timer);
@@ -64,18 +67,18 @@ export function Lobby() {
         </div>
       )}
       <div className="lobby-header">
-        <h2>Лобби</h2>
+        <h2>{S.lobbyTitle}</h2>
         {!nickname ? (
           <div className="nick-form">
             <input
               type="text"
-              placeholder="Ваш никнейм"
+              placeholder={S.nicknamePlaceholder}
               maxLength={20}
               value={nickInput}
               onChange={(e) => setNickInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSetNickname()}
             />
-            <button onClick={handleSetNickname}>Войти</button>
+            <button onClick={handleSetNickname}>{S.enter}</button>
           </div>
         ) : (
           <div className="nick-display">
@@ -83,7 +86,7 @@ export function Lobby() {
               <div className="nick-form">
                 <input
                   type="text"
-                  placeholder="Новый ник"
+                  placeholder={S.newNickPlaceholder}
                   maxLength={20}
                   value={nickInput}
                   onChange={(e) => setNickInput(e.target.value)}
@@ -111,54 +114,63 @@ export function Lobby() {
               <span
                 className="nick-display-name"
                 onClick={() => { setNickInput(nickname); setEditingNick(true); }}
-                title="Нажмите, чтобы изменить ник"
+                title={S.changeNickTooltip}
               >
                 👤 {nickname} ✏️
               </span>
             )}
             <button className="btn-primary" onClick={() => setShowCreate(true)}>
-              + Создать стол
+              {S.createTableBtn}
             </button>
           </div>
         )}
       </div>
 
       {loading ? (
-        <div className="lobby-loading">Загрузка...</div>
+        <div className="lobby-loading">{S.loading}</div>
       ) : tables.length === 0 ? (
         <div className="lobby-empty">
-          Нет доступных столов. Создайте первый!
+          {S.noTables}
         </div>
       ) : (
         <div className="tables-grid">
-          {tables.map((t) => (
-            <div key={t.id} className="table-card" onClick={() => nickname && setJoinTableId(t.id)}>
-              <div className="table-card-header">
-                <span className="table-name">{t.name}</span>
-                <span className={`table-type ${t.type}`}>
-                  {t.type === 'cash' ? 'Кэш' : 'Турнир'}
-                </span>
+          {tables.map((t) => {
+            const isMyTable = afkTableId === t.id;
+            return (
+              <div key={t.id} className={`table-card ${isMyTable ? 'table-card-mine' : ''}`} onClick={() => nickname && setJoinTableId(t.id)}>
+                <div className="table-card-header">
+                  <span className="table-name">{t.name}</span>
+                  <span className={`table-type ${t.type}`}>
+                    {t.type === 'cash' ? S.cash : S.tournament}
+                  </span>
+                </div>
+                <div className="table-card-info">
+                  <span>{S.blindsLabel}: {t.blind_small}/{t.blind_small * 2}</span>
+                  <span>{S.playersLabel}: {t.players_count}/{t.max_players}</span>
+                </div>
+                <div className={`table-status ${t.status}`}>
+                  {t.status === 'waiting' ? S.statusWaiting : t.status === 'running' ? S.statusRunning : S.statusFinished}
+                </div>
+                {isMyTable && (
+                  <div className="table-card-afk-badge">
+                    <span>{S.atTableBadge}</span>
+                    <span className="afk-badge-stack">{S.chipsLabel}: {afkTableStack}</span>
+                  </div>
+                )}
+                {t.players_count === 0 && (
+                  <button
+                    className="btn-delete-table"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      api.deleteTable(t.id).then(() => loadTables()).catch((err) => alert(err.message));
+                    }}
+                  >
+                    {S.deleteTable}
+                  </button>
+                )}
               </div>
-              <div className="table-card-info">
-                <span>Блайнды: {t.blind_small}/{t.blind_small * 2}</span>
-                <span>Игроки: {t.players_count}/{t.max_players}</span>
-              </div>
-              <div className={`table-status ${t.status}`}>
-                {t.status === 'waiting' ? 'Ожидание' : t.status === 'running' ? 'Идёт игра' : 'Завершён'}
-              </div>
-              {t.players_count === 0 && (
-                <button
-                  className="btn-delete-table"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    api.deleteTable(t.id).then(() => loadTables()).catch((err) => alert(err.message));
-                  }}
-                >
-                  🗑 Удалить
-                </button>
-              )}
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -175,6 +187,8 @@ export function Lobby() {
       {joinTableId && (
         <JoinTableModal
           tableId={joinTableId}
+          isReturning={afkTableId === joinTableId}
+          returningStack={afkTableStack}
           onClose={() => setJoinTableId(null)}
           onJoined={(tableId) => {
             setJoinTableId(null);

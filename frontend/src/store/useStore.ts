@@ -97,6 +97,12 @@ interface AppState {
   showKickedOverlay: boolean;
   setShowKickedOverlay: (v: boolean) => void;
 
+  // AFK — player left the table view but is still at the table
+  afkTableId: string | null;
+  afkTableStack: number | null;
+  setAfkTable: (tableId: string, stack: number) => void;
+  clearAfkTable: () => void;
+
   // UI
   soundVolume: number;
   soundMuted: boolean;
@@ -152,6 +158,11 @@ export const useStore = create<AppState>((set) => ({
 
   showKickedOverlay: false,
   setShowKickedOverlay: (v) => set({ showKickedOverlay: v }),
+
+  afkTableId: null,
+  afkTableStack: null,
+  setAfkTable: (tableId, stack) => set({ afkTableId: tableId, afkTableStack: stack }),
+  clearAfkTable: () => set({ afkTableId: null, afkTableStack: null }),
 
   soundVolume: getSavedVolume(),
   soundMuted: getSavedMuted(),

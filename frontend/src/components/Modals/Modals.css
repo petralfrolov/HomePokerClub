@@ -59,6 +59,13 @@
   cursor: pointer;
 }
 
+.returning-stack-display {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--text-accent);
+  padding: 0.6rem 0;
+}
+
 .form-row {
   display: flex;
   gap: 1rem;

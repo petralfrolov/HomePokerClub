@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '../../store/useStore';
 import { api } from '../../api';
 import { FrolTipRequest } from '../../types';
+import { S } from '../../strings';
 import './Modals.css';
 
 export function FrolTipModal() {
@@ -95,9 +96,9 @@ export function FrolTipModal() {
         animate={{ scale: 1, opacity: 1 }}
       >
         <div className="frol-header">
-          <img src="/static/dealer_avatars/frol.png" alt="Фрол" className="frol-avatar" />
-          <h3>Фрол отлично поработал!</h3>
-          <p>Оставить чаевые?</p>
+          <img src="/static/dealer_avatars/frol.png" alt={S.dealerNames.frol} className="frol-avatar" />
+          <h3>{S.frolWorkedGreat}</h3>
+          <p>{S.leaveTip}</p>
         </div>
 
         <div className="frol-timer">⏱ {timeLeft}с</div>
@@ -112,12 +113,12 @@ export function FrolTipModal() {
             onChange={(e) => setTipPercent(parseInt(e.target.value))}
           />
           <div className="frol-tip-amount">
-            {tipPercent}% = {tipAmount} фишек
+            {tipPercent}% = {tipAmount} {S.chips}
           </div>
         </div>
 
         <button className="btn-primary frol-tip-btn" onClick={() => handleTip()}>
-          💰 Дать чаевые ({tipAmount})
+          {S.giveTip} ({tipAmount})
         </button>
 
         {/* Decline button variants */}
@@ -128,7 +129,7 @@ export function FrolTipModal() {
             transition={{ duration: 0.3 }}
             onClick={handleDecline}
           >
-            Отказаться
+            {S.decline}
           </motion.button>
         )}
 
@@ -137,7 +138,7 @@ export function FrolTipModal() {
             className="frol-decline-invisible"
             onClick={handleDecline}
           >
-            Отказаться
+            {S.decline}
           </button>
         )}
 

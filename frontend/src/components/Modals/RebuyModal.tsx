@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useStore } from '../../store/useStore';
 import { api } from '../../api';
+import { S } from '../../strings';
 import './Modals.css';
 
 export function RebuyModal() {
@@ -17,7 +18,7 @@ export function RebuyModal() {
 
   const playerName = gameState?.players.find(
     (p) => p.player_id === pendingRebuy.player_id
-  )?.nickname || 'Игрок';
+  )?.nickname || S.playerFallback;
 
   async function handleApprove() {
     try {
@@ -47,14 +48,14 @@ export function RebuyModal() {
   return (
     <div className="modal-overlay" onClick={() => setPendingRebuy(null)}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <h3>Запрос на додепоз</h3>
+        <h3>{S.rebuyRequestTitle}</h3>
         <p>
-          {playerName} хочет додепозиться на сумму <strong>{pendingRebuy.amount}</strong>.
+          {playerName} {S.wantsRebuy} <strong>{pendingRebuy.amount}</strong>.
         </p>
-        <p>Разрешить?</p>
+        <p>{S.allow}</p>
         <div className="modal-actions">
-          <button className="btn-secondary" onClick={handleDeny}>Нет</button>
-          <button className="btn-primary" onClick={handleApprove}>Да</button>
+          <button className="btn-secondary" onClick={handleDeny}>{S.no}</button>
+          <button className="btn-primary" onClick={handleApprove}>{S.yes}</button>
         </div>
       </div>
     </div>

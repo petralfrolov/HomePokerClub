@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../../store/useStore';
 import { api } from '../../api';
+import { S } from '../../strings';
 import { CardDisplay } from '../Table/CardDisplay';
 import './Controls.css';
 
@@ -112,7 +113,7 @@ export function GameControls() {
                 }
               }}
             >
-              {hasRequestedRebuy ? 'Ожидание...' : 'Додеп'}
+              {hasRequestedRebuy ? S.rebuyWaiting : S.rebuyBtn}
             </button>
           </div>
           <input
@@ -163,7 +164,7 @@ export function GameControls() {
                 }
               }}
             >
-              🔙 Вернуться в игру
+              {S.returnToGame}
             </button>
           </div>
         </div>
@@ -271,12 +272,12 @@ export function GameControls() {
               className="raise-preset-btn"
               onClick={() => setRaiseAmount(halfPotRaise)}
               disabled={loading}
-            >½ Банк</button>
+            >{S.halfPot}</button>
             <button
               className="raise-preset-btn"
               onClick={() => setRaiseAmount(fullPotRaise)}
               disabled={loading}
-            >Банк</button>
+            >{S.pot}</button>
           </div>
           <div className="raise-slider-row">
             <button
@@ -307,7 +308,7 @@ export function GameControls() {
             onClick={() => doAction('fold')}
             disabled={loading}
           >
-            Фолд
+            {S.fold}
           </button>
 
           {canCheck ? (
@@ -316,7 +317,7 @@ export function GameControls() {
               onClick={() => doAction('check')}
               disabled={loading}
             >
-              Чек
+              {S.check}
             </button>
           ) : (
             <button
@@ -324,7 +325,7 @@ export function GameControls() {
               onClick={() => doAction('call')}
               disabled={loading}
             >
-              Колл {callAmount}
+              {S.call} {callAmount}
             </button>
           )}
 
@@ -333,7 +334,7 @@ export function GameControls() {
             onClick={() => doAction('raise', effectiveRaise)}
             disabled={loading}
           >
-            Рейз {effectiveRaise}
+            {S.raise} {effectiveRaise}
           </button>
 
           <button
@@ -341,13 +342,13 @@ export function GameControls() {
             onClick={() => doAction('allin')}
             disabled={loading}
           >
-            Олл-ин {myPlayer.stack}
+            {S.allIn} {myPlayer.stack}
           </button>
         </div>
 
         <div className="controls-secondary" style={{ pointerEvents: 'auto', opacity: 1 }}>
           <button className="control-btn-small" onClick={handleAway}>
-            {myPlayer.away ? '🔙 Вернуться' : '💤 Отойти'}
+            {myPlayer.away ? S.returnBack : S.goAway}
           </button>
 
           {myPlayer.stack === 0 && (
@@ -361,7 +362,7 @@ export function GameControls() {
                 }
               }}
             >
-              💰 Купить фишки
+              {S.buyChips}
             </button>
           )}
         </div>
