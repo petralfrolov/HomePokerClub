@@ -1,6 +1,7 @@
 """Players router — avatar upload, profile."""
 
 import os
+import time
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
@@ -46,7 +47,7 @@ async def upload_avatar(
     with open(filepath, "wb") as f:
         f.write(content)
 
-    avatar_url = f"/static/player_avatars/{safe_filename}"
+    avatar_url = f"/static/player_avatars/{safe_filename}?v={int(time.time())}"
 
     # Update session
     result = await db.execute(select(Session).where(Session.id == session_id))
