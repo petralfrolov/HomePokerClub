@@ -17,6 +17,7 @@ export function GameControls() {
   const rebuyWindow = useStore((s) => s.rebuyWindow);
   const [raiseAmount, setRaiseAmount] = useState<number>(0);
   const [loading, setLoading] = useState(false);
+  const prevTurnRef = useRef<string | null>(null);
   const [rebuyAmount, setRebuyAmount] = useState<number>(0);
   const [rebuyTimeLeft, setRebuyTimeLeft] = useState<number>(0);
   const dragRef = useRef<HTMLDivElement>(null);
@@ -143,14 +144,22 @@ export function GameControls() {
 
   if (!inActiveHand || myPlayer.status === 'bust' || myPlayer.status === 'folded' || !hasCards) return null;
 
+  // Reset raise slider when turn/round changes
+  const turnKey = `${gameState.round_number}-${gameState.current_player_seat}`;
+  if (prevTurnRef.current !== turnKey) {
+    prevTurnRef.current = turnKey;
+    if (raiseAmount !== 0) setRaiseAmount(0);
+  }
+
   const canCheck = gameState.current_bet <= (myPlayer.bet || 0);
   const callAmount = Math.min(gameState.current_bet - (myPlayer.bet || 0), myPlayer.stack);
-  const minRaise = gameState.current_bet + bb;
+  const sb = gameState.blind_small;
+  const minRaise = gameState.current_bet + (gameState.min_raise || bb);
   const maxRaise = myPlayer.stack + (myPlayer.bet || 0);
 
-  // BB-discrete steps for the slider
+  // SB-discrete steps for the slider
   const raiseSteps: number[] = [];
-  for (let v = minRaise; v <= maxRaise; v += bb) {
+  for (let v = minRaise; v <= maxRaise; v += sb) {
     raiseSteps.push(v);
   }
   // Always include max (all-in) if not already there
@@ -167,10 +176,13 @@ export function GameControls() {
     return best;
   }
 
-  // Pot-based raise presets (rounded to BB multiples)
-  const roundToBB = (val: number) => Math.round(val / bb) * bb;
-  const halfPotRaise = Math.max(minRaise, Math.min(maxRaise, roundToBB(gameState.pot / 2)));
-  const fullPotRaise = Math.max(minRaise, Math.min(maxRaise, roundToBB(gameState.pot)));
+  // Effective raise: clamp to valid range
+  const effectiveRaise = raiseAmount ? Math.max(raiseAmount, minRaise) : minRaise;
+
+  // Pot-based raise presets (rounded to SB multiples)
+  const roundToSB = (val: number) => Math.round(val / sb) * sb;
+  const halfPotRaise = Math.max(minRaise, Math.min(maxRaise, roundToSB(gameState.pot / 2)));
+  const fullPotRaise = Math.max(minRaise, Math.min(maxRaise, roundToSB(gameState.pot)));
 
   async function doAction(action: string, amount?: number) {
     setLoading(true);
@@ -240,7 +252,7 @@ export function GameControls() {
           <div className="raise-slider-row">
             <button
               className="raise-step-btn"
-              onClick={() => setRaiseAmount(raiseSteps[Math.max(0, closestStepIndex(raiseAmount || minRaise) - 1)])}
+              onClick={() => setRaiseAmount(raiseSteps[Math.max(0, closestStepIndex(effectiveRaise) - 1)])}
             >−</button>
             <input
               type="range"
@@ -248,15 +260,15 @@ export function GameControls() {
               min={0}
               max={raiseSteps.length - 1}
               step={1}
-              value={closestStepIndex(raiseAmount || minRaise)}
+              value={closestStepIndex(effectiveRaise)}
               onChange={(e) => setRaiseAmount(raiseSteps[parseInt(e.target.value)])}
               onPointerDown={(e) => e.stopPropagation()}
             />
             <button
               className="raise-step-btn"
-              onClick={() => setRaiseAmount(raiseSteps[Math.min(raiseSteps.length - 1, closestStepIndex(raiseAmount || minRaise) + 1)])}
+              onClick={() => setRaiseAmount(raiseSteps[Math.min(raiseSteps.length - 1, closestStepIndex(effectiveRaise) + 1)])}
             >+</button>
-            <span className="raise-value">{raiseAmount || minRaise}</span>
+            <span className="raise-value">{effectiveRaise}</span>
           </div>
         </div>
 
@@ -289,10 +301,10 @@ export function GameControls() {
 
           <button
             className="control-btn raise-confirm-btn"
-            onClick={() => doAction('raise', raiseAmount || minRaise)}
+            onClick={() => doAction('raise', effectiveRaise)}
             disabled={loading}
           >
-            Рейз {raiseAmount || minRaise}
+            Рейз {effectiveRaise}
           </button>
 
           <button

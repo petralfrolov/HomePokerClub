@@ -9,6 +9,7 @@ const SOUND_FILES: Record<string, string> = {
   fold: '/sounds/fold.mp3',
   check: '/sounds/check.mp3',
   allin: '/sounds/allin.mp3',
+  raise: '/sounds/raise.mp3',
   win: '/sounds/win.mp3',
   lose: '/sounds/lose.mp3',
   stalling: '/sounds/stalling.mp3',

@@ -155,6 +155,7 @@ export function useWebSocket(tableId: string | null) {
         if (act === 'fold') playSound('fold');
         else if (act === 'check') playSound('check');
         else if (act === 'allin') playSound('allin');
+        else if (act === 'raise') playSound('raise');
         break;
       }
       case 'community_cards':

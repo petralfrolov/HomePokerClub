@@ -125,6 +125,9 @@ export function PlayerSeat({ player, totalPlayers, index }: Props) {
       <div className="player-info">
         <span className="player-nickname">{player.nickname}</span>
         <span className="player-stack">{player.stack}</span>
+        {player.hand_name && (
+          <span className="player-hand-name">{player.hand_name}</span>
+        )}
       </div>
 
       {/* Timer bar */}

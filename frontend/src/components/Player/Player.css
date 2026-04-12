@@ -152,6 +152,14 @@
   font-weight: 600;
 }
 
+.player-hand-name {
+  font-size: 0.6rem;
+  color: #ffd700;
+  font-weight: 600;
+  text-shadow: 0 0 4px rgba(255, 215, 0, 0.5);
+  white-space: nowrap;
+}
+
 /* Bet chip */
 .player-bet {
   position: absolute;

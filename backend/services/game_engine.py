@@ -18,6 +18,19 @@ evaluator = Evaluator()
 
 STAGES = ["preflop", "flop", "turn", "river", "showdown"]
 
+# Hand rank class to Russian name
+HAND_CLASS_NAMES_RU = {
+    1: "Стрит-флеш",
+    2: "Каре",
+    3: "Фулл-хаус",
+    4: "Флеш",
+    5: "Стрит",
+    6: "Тройка",
+    7: "Две пары",
+    8: "Пара",
+    9: "Старшая карта",
+}
+
 # Danilka strong hands (as rank pairs)
 DANILKA_STRONG_HANDS = [
     ("A", "A"), ("K", "K"), ("Q", "Q"), ("J", "J")
@@ -670,6 +683,7 @@ class GameEngine:
             "pot": state.pot + sum(p.bet_this_round for p in state.players),
             "community_cards": [Card.int_to_str(c) for c in state.community_cards],
             "current_bet": state.current_bet,
+            "min_raise": state.min_raise,
             "dealer_seat": state.dealer_seat_index,
             "blind_small": state.blind_small,
             "blind_big": state.blind_big,
@@ -702,6 +716,18 @@ class GameEngine:
                 pdata["hole_cards"] = [Card.int_to_str(c) for c in p.hole_cards]
             else:
                 pdata["hole_cards"] = None
+
+            # Hand name: show for own cards or when cards are visible
+            can_see_cards = pdata["hole_cards"] is not None
+            if can_see_cards and len(p.hole_cards) == 2 and len(state.community_cards) >= 3:
+                try:
+                    rank = evaluator.evaluate(p.hole_cards, state.community_cards)
+                    rank_class = evaluator.get_rank_class(rank)
+                    pdata["hand_name"] = HAND_CLASS_NAMES_RU.get(rank_class, "")
+                except Exception:
+                    pdata["hand_name"] = None
+            else:
+                pdata["hand_name"] = None
 
             snapshot["players"].append(pdata)
 

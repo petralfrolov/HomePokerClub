@@ -16,7 +16,6 @@ backend/data/poker.db-shm
 backend/data/poker.db-wal
 
 # Uploaded avatars (user data)
-backend/data/avatars/*
 backend/data/player_avatars/*
 !backend/data/avatars/.gitkeep
 !backend/data/player_avatars/.gitkeep

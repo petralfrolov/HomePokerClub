@@ -20,6 +20,7 @@ export interface PlayerInfo {
   away: boolean;
   hole_cards: string[] | null;
   revealed_cards: string[];
+  hand_name: string | null;
 }
 
 export interface CashoutLedgerEntry {
@@ -36,6 +37,7 @@ export interface GameState {
   pot: number;
   community_cards: string[];
   current_bet: number;
+  min_raise: number;
   dealer_seat: number;
   blind_small: number;
   blind_big: number;
