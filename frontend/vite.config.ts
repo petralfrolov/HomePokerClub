@@ -14,15 +14,18 @@ export default defineConfig({
   },
   server: {
     port: 5173,
-    host: '0.0.0.0',
+    host: '127.0.0.1',
+    allowedHosts: ['poker.vgsoft.site'],
     proxy: {
-      '/api': 'http://localhost:8000',
+      '/api': 'http://localhost:8001',
+      '/docs': 'http://localhost:8001',
+      '/openapi.json': 'http://localhost:8001',
+      '/static': 'http://localhost:8001',
       '/ws': {
-        target: 'http://localhost:8000',
+        target: 'http://localhost:8001',
         ws: true,
         changeOrigin: true,
       },
-      '/static': 'http://localhost:8000',
     },
   },
 });
