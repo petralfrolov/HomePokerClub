@@ -9,19 +9,49 @@ interface Props {
   onCreated: (tableId: string) => void;
 }
 
+interface LobbySettings {
+  type: 'cash' | 'tournament';
+  blindSmall: number;
+  blindBig: number;
+  timePerMove: number;
+  timeBank: number;
+  dealerType: 'robot' | 'frol' | 'danilka';
+  minBuyin: number;
+  maxBuyin: number;
+  startingStack: number;
+  blindInterval: number;
+}
+
+function loadSavedSettings(): LobbySettings {
+  try {
+    const raw = localStorage.getItem('lobby_settings');
+    if (raw) return JSON.parse(raw);
+  } catch {}
+  return {
+    type: 'cash', blindSmall: 10, blindBig: 20,
+    timePerMove: 30, timeBank: 90, dealerType: 'robot',
+    minBuyin: 200, maxBuyin: 2000, startingStack: 1500, blindInterval: 10,
+  };
+}
+
+function saveSettings(s: LobbySettings) {
+  localStorage.setItem('lobby_settings', JSON.stringify(s));
+}
+
 export function CreateTableModal({ onClose, onCreated }: Props) {
   const sessionId = useStore((s) => s.sessionId);
+  const saved = loadSavedSettings();
   const [name, setName] = useState('');
-  const [type, setType] = useState<'cash' | 'tournament'>('cash');
-  const [blindSmall, setBlindSmall] = useState(10);
-  const [blindBig, setBlindBig] = useState(20);
-  const [timePerMove, setTimePerMove] = useState(30);
-  const [timeBank, setTimeBank] = useState(90);
-  const [dealerType, setDealerType] = useState<'robot' | 'frol' | 'danilka'>('robot');
-  const [minBuyin, setMinBuyin] = useState(200);
-  const [maxBuyin, setMaxBuyin] = useState(2000);
-  const [startingStack, setStartingStack] = useState(1500);
-  const [blindInterval, setBlindInterval] = useState(10);
+  const [type, setType] = useState<'cash' | 'tournament'>(saved.type);
+  const [blindSmall, setBlindSmall] = useState(saved.blindSmall);
+  const [blindBig, setBlindBig] = useState(saved.blindBig);
+  const [timePerMove, setTimePerMove] = useState(saved.timePerMove);
+  const [timeBank, setTimeBank] = useState(saved.timeBank);
+  const [dealerType, setDealerType] = useState<'robot' | 'frol' | 'danilka'>(saved.dealerType);
+  const [minBuyin, setMinBuyin] = useState(saved.minBuyin);
+  const [maxBuyin, setMaxBuyin] = useState(saved.maxBuyin);
+  const [startingStack, setStartingStack] = useState(saved.startingStack);
+  const [blindInterval, setBlindInterval] = useState(saved.blindInterval);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -34,13 +64,16 @@ export function CreateTableModal({ onClose, onCreated }: Props) {
     setError('');
 
     try {
+      const clampedTimePerMove = Math.max(5, Math.min(120, timePerMove));
+      const clampedTimeBank = Math.max(0, Math.min(600, timeBank));
+
       const data: any = {
         name: name.trim(),
         type,
         blind_small: blindSmall,
         blind_big: blindBig,
-        time_per_move: timePerMove,
-        time_bank: timeBank,
+        time_per_move: clampedTimePerMove,
+        time_bank: clampedTimeBank,
         dealer_type: dealerType,
       };
 
@@ -51,6 +84,12 @@ export function CreateTableModal({ onClose, onCreated }: Props) {
         data.starting_stack = startingStack;
         data.tournament_blind_interval = blindInterval;
       }
+
+      saveSettings({
+        type, blindSmall, blindBig,
+        timePerMove: clampedTimePerMove, timeBank: clampedTimeBank,
+        dealerType, minBuyin, maxBuyin, startingStack, blindInterval,
+      });
 
       const res = await api.createTable(data);
       onCreated(res.table_id);

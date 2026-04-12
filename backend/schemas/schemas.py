@@ -9,8 +9,8 @@ class TableCreate(BaseModel):
     type: str = Field(..., pattern=r"^(cash|tournament)$")
     blind_small: int = Field(..., gt=0)
     blind_big: int = Field(..., gt=0)
-    time_per_move: int = Field(30, ge=10, le=60)
-    time_bank: int = Field(90, ge=60, le=120)
+    time_per_move: int = Field(30, ge=5, le=120)
+    time_bank: int = Field(90, ge=0, le=600)
     dealer_type: str = Field("robot", pattern=r"^(robot|frol|danilka)$")
     min_buyin: int | None = None
     max_buyin: int | None = None
