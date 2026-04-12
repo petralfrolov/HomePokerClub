@@ -129,6 +129,7 @@ async def lifespan(app: FastAPI):
                         stack=p.stack,
                         time_bank=p.time_bank,
                         total_buyin=p.stack,
+                        avatar_url=p.avatar_url,
                     )
                 )
     

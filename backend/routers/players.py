@@ -58,6 +58,13 @@ async def upload_avatar(
         db.add(session)
     await db.commit()
 
+    # Update in-memory game state
+    from backend.services.game_engine import game_engine
+    for game in game_engine.games.values():
+        for p in game.players:
+            if p.session_id == session_id:
+                p.avatar_url = avatar_url
+
     return AvatarResponse(avatar_url=avatar_url)
 
 

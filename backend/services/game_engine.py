@@ -60,6 +60,7 @@ class PlayerState:
     time_bank: int = 90  # remaining time bank in seconds
     total_buyin: int = 0  # total chips bought in
     total_cashout: int = 0  # total chips cashed out
+    avatar_url: str | None = None
 
 
 @dataclass
@@ -696,6 +697,7 @@ class GameEngine:
                 "player_id": p.player_id,
                 "session_id": p.session_id,
                 "nickname": p.nickname,
+                "avatar_url": p.avatar_url,
                 "seat_index": p.seat_index,
                 "stack": p.stack,
                 "bet": p.bet_this_round,

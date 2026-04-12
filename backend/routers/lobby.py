@@ -208,6 +208,7 @@ async def join_table(table_id: str, body: JoinTable, db: AsyncSession = Depends(
                 time_bank=table.time_bank_max,
                 total_buyin=stack,
                 status=join_status,
+                avatar_url=avatar_url,
             ),
         )
 
