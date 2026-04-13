@@ -42,6 +42,8 @@ class Table(Base):
     starting_stack: Mapped[int | None] = mapped_column(Integer, nullable=True)
     tournament_blind_interval: Mapped[int | None] = mapped_column(Integer, nullable=True)
     status: Mapped[str] = mapped_column(Text, default="waiting")
+    round_number: Mapped[int] = mapped_column(Integer, default=0)
+    dealer_seat_index: Mapped[int] = mapped_column(Integer, default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow)
 
     players: Mapped[list["Player"]] = relationship(back_populates="table", lazy="selectin")

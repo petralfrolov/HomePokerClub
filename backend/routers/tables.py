@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from backend.config import ACTION_RATE_LIMIT, ACTION_RATE_WINDOW
 from backend.database import get_db
 from backend.database import async_session as async_session_factory
 from backend.models.tables import Table, Player, GameRound, RoundAction
@@ -19,6 +20,7 @@ from backend.schemas.schemas import (
     GameAction, StartGame, RebuyRequest, RebuyApprove, RebuyDeny,
     TipPlayer, AccuseStalling, RevealCard, AwayStatus,
     FrolTip, FrolDecline, OkResponse,
+    ActionResponse, RebuyRequestResponse, AccuseStallingResponse, FrolDeclineResponse,
 )
 from backend.services.game_engine import game_engine, PlayerState
 from backend.services.dealer import (
@@ -42,8 +44,6 @@ def _get_table_lock(table_id: str) -> asyncio.Lock:
 
 
 # --- Simple in-memory rate limiter for /action endpoint ---
-_ACTION_RATE_LIMIT = 5  # max requests per window
-_ACTION_RATE_WINDOW = 2.0  # window in seconds
 _action_timestamps: dict[str, list[float]] = defaultdict(list)
 
 
@@ -51,8 +51,8 @@ def _check_rate_limit(session_id: str) -> None:
     now = time.monotonic()
     timestamps = _action_timestamps[session_id]
     # Prune old entries
-    _action_timestamps[session_id] = [t for t in timestamps if now - t < _ACTION_RATE_WINDOW]
-    if len(_action_timestamps[session_id]) >= _ACTION_RATE_LIMIT:
+    _action_timestamps[session_id] = [t for t in timestamps if now - t < ACTION_RATE_WINDOW]
+    if len(_action_timestamps[session_id]) >= ACTION_RATE_LIMIT:
         raise HTTPException(429, "Too many requests, slow down")
     _action_timestamps[session_id].append(now)
 
@@ -417,8 +417,18 @@ async def _check_hand_end(table_id: str, game, result: dict):
 
 
 async def _sync_stacks_to_db(table_id: str, game):
-    """Sync in-memory player stacks to database."""
+    """Sync in-memory player stacks and table state to database."""
     async with async_session_factory() as db:
+        # Sync table-level state
+        tbl_result = await db.execute(select(Table).where(Table.id == table_id))
+        tbl = tbl_result.scalar_one_or_none()
+        if tbl:
+            tbl.blind_small = game.blind_small
+            tbl.blind_big = game.blind_big
+            tbl.round_number = game.round_number
+            tbl.dealer_seat_index = game.dealer_seat_index
+
+        # Sync player state
         for p in game.players:
             result = await db.execute(select(Player).where(Player.id == p.player_id))
             db_player = result.scalar_one_or_none()
@@ -512,7 +522,7 @@ async def start_game(table_id: str, body: StartGame, db: AsyncSession = Depends(
 
 # ---- Game action ----
 
-@router.post("/action")
+@router.post("/action", response_model=ActionResponse)
 async def game_action(table_id: str, body: GameAction, db: AsyncSession = Depends(get_db)):
     _check_rate_limit(body.session_id)
     game = _get_game_or_404(table_id)
@@ -534,13 +544,13 @@ async def game_action(table_id: str, body: GameAction, db: AsyncSession = Depend
             # the current state so the client can update via WebSocket.
             if error_msg in ("Not your turn", "Cannot act in current status", "No active turn"):
                 snapshot = game_engine.get_game_snapshot(game, for_session_id=body.session_id)
-                return {"ok": True, "raced": True, "game_state_snapshot": snapshot}
+                return ActionResponse(raced=True, game_state_snapshot=snapshot)
             # Genuine invalid action (bad amount, nothing to call, etc.) –
             # restart the timer so the player can try again.
             await _start_turn_timer(table_id, game)
             raise HTTPException(400, error_msg)
 
-        # Log action
+        # Log action and sync player state in one transaction
         if game.round_id:
             player = game.get_player_by_session(body.session_id)
             action_log = RoundAction(
@@ -551,7 +561,17 @@ async def game_action(table_id: str, body: GameAction, db: AsyncSession = Depend
                 stage=game.stage,
             )
             db.add(action_log)
-            await db.commit()
+
+        # Sync current player state to DB in same transaction
+        if player:
+            db_result = await db.execute(select(Player).where(Player.id == player.player_id))
+            db_player = db_result.scalar_one_or_none()
+            if db_player:
+                db_player.stack = player.stack
+                db_player.status = player.status
+                db_player.time_bank = player.time_bank
+
+        await db.commit()
 
         await ws_manager.broadcast_all(table_id, "action_made", {
             "player_id": result.get("player_id"),
@@ -566,12 +586,12 @@ async def game_action(table_id: str, body: GameAction, db: AsyncSession = Depend
             await _broadcast_game_state(table_id, game)
 
         snapshot = game_engine.get_game_snapshot(game, for_session_id=body.session_id)
-        return {"ok": True, "game_state_snapshot": snapshot}
+        return ActionResponse(game_state_snapshot=snapshot)
 
 
 # ---- Rebuy ----
 
-@router.post("/rebuy/request")
+@router.post("/rebuy/request", response_model=RebuyRequestResponse)
 async def request_rebuy(table_id: str, body: RebuyRequest, db: AsyncSession = Depends(get_db)):
     game = _get_game_or_404(table_id)
     player = _get_player_or_403(game, body.session_id)
@@ -591,7 +611,7 @@ async def request_rebuy(table_id: str, body: RebuyRequest, db: AsyncSession = De
             "request_id": req.request_id,
         })
 
-    return {"ok": True, "request_id": req.request_id}
+    return RebuyRequestResponse(request_id=req.request_id)
 
 
 @router.post("/rebuy/approve", response_model=OkResponse)
@@ -681,7 +701,7 @@ async def tip_player(table_id: str, body: TipPlayer):
     return OkResponse()
 
 
-@router.post("/accuse-stalling")
+@router.post("/accuse-stalling", response_model=AccuseStallingResponse)
 async def accuse_stalling(table_id: str, body: AccuseStalling):
     game = _get_game_or_404(table_id)
     accuser = _get_player_or_403(game, body.session_id)
@@ -715,7 +735,7 @@ async def accuse_stalling(table_id: str, body: AccuseStalling):
         "target_id": target.player_id,
     })
 
-    return {"ok": True, "new_time_bank": 10}
+    return AccuseStallingResponse(new_time_bank=10)
 
 
 @router.post("/reveal-card", response_model=OkResponse)
@@ -782,7 +802,7 @@ async def frol_tip(table_id: str, body: FrolTip):
     return OkResponse()
 
 
-@router.post("/frol-tip/decline")
+@router.post("/frol-tip/decline", response_model=FrolDeclineResponse)
 async def frol_tip_decline(table_id: str, body: FrolDecline):
     game = _get_game_or_404(table_id)
     player = _get_player_or_403(game, body.session_id)
@@ -803,7 +823,7 @@ async def frol_tip_decline(table_id: str, body: FrolDecline):
             "target": "frol",
         })
         await _broadcast_game_state(table_id, game)
-        return {"declined": False, "reason": "trick_button"}
+        return FrolDeclineResponse(declined=False, reason="trick_button")
 
     game._frol_tip_pending = False
-    return {"ok": True}
+    return FrolDeclineResponse()

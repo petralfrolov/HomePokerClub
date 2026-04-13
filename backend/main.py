@@ -16,6 +16,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from backend.config import CORS_ORIGINS, AVATARS_DIR, PLAYER_AVATARS_DIR, APP_VERSION, DATABASE_URL
+from backend.config import IDLE_TABLE_CLEANUP_INTERVAL, IDLE_TABLE_TIMEOUT_MINUTES
 
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend" / "dist"
 from backend.database import init_db
@@ -29,7 +30,7 @@ from backend.database import async_session
 from backend.models.tables import Table, Player
 
 
-IDLE_TABLE_TIMEOUT = timedelta(minutes=60)
+IDLE_TABLE_TIMEOUT = timedelta(minutes=IDLE_TABLE_TIMEOUT_MINUTES)
 
 
 async def _cleanup_idle_tables():
@@ -38,7 +39,7 @@ async def _cleanup_idle_tables():
     from sqlalchemy import delete as sa_delete
 
     while True:
-        await asyncio.sleep(300)  # check every 5 minutes
+        await asyncio.sleep(IDLE_TABLE_CLEANUP_INTERVAL)
         now = datetime.now(timezone.utc)
         stale_ids = [
             table_id
@@ -115,6 +116,9 @@ async def lifespan(app: FastAPI):
                 dealer_type=t.dealer_type,
                 tournament_blind_interval=t.tournament_blind_interval,
             )
+            # Restore table-level game state from DB
+            game.round_number = t.round_number
+            game.dealer_seat_index = t.dealer_seat_index
             # Add existing players
             p_result = await db.execute(select(Player).where(Player.table_id == t.id))
             players_list = p_result.scalars().all()

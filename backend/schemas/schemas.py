@@ -179,5 +179,27 @@ class OkResponse(BaseModel):
     ok: bool = True
 
 
+class ActionResponse(BaseModel):
+    ok: bool = True
+    raced: bool = False
+    game_state_snapshot: dict | None = None
+
+
+class RebuyRequestResponse(BaseModel):
+    ok: bool = True
+    request_id: str
+
+
+class AccuseStallingResponse(BaseModel):
+    ok: bool = True
+    new_time_bank: int
+
+
+class FrolDeclineResponse(BaseModel):
+    ok: bool = True
+    declined: bool = True
+    reason: str | None = None
+
+
 class ErrorResponse(BaseModel):
     detail: str

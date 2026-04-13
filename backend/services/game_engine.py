@@ -6,11 +6,19 @@ Manages deck, dealing, betting rounds, pot calculation, side pots, and showdown.
 import json
 import logging
 import random
+from collections import deque
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any
 
 from treys import Card, Deck, Evaluator
+
+from backend.config import (
+    DANILKA_EVENT_CHANCE,
+    DANILKA_MAX_DEAL_ATTEMPTS,
+    DEFAULT_TIME_BANK,
+    GAME_LOG_MAX_ENTRIES,
+)
 
 logger = logging.getLogger("poker.engine")
 
@@ -57,7 +65,7 @@ class PlayerState:
     revealed_cards: list[int] = field(default_factory=list)  # indices 0 or 1
     has_acted_this_round: bool = False
     away: bool = False
-    time_bank: int = 90  # remaining time bank in seconds
+    time_bank: int = DEFAULT_TIME_BANK  # remaining time bank in seconds
     total_buyin: int = 0  # total chips bought in
     total_cashout: int = 0  # total chips cashed out
     avatar_url: str | None = None
@@ -108,7 +116,15 @@ class GameState:
     last_activity_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
     # Game action log (recent entries for display in ledger)
-    game_log: list[dict[str, Any]] = field(default_factory=list)
+    game_log: deque = field(default_factory=lambda: deque(maxlen=GAME_LOG_MAX_ENTRIES))
+
+    # Internal dict indices (rebuilt by _rebuild_indices)
+    _idx_by_session: dict[str, PlayerState] = field(default_factory=dict, repr=False)
+    _idx_by_id: dict[str, PlayerState] = field(default_factory=dict, repr=False)
+
+    def _rebuild_indices(self) -> None:
+        self._idx_by_session = {p.session_id: p for p in self.players}
+        self._idx_by_id = {p.player_id: p for p in self.players}
 
     def active_players(self) -> list[PlayerState]:
         return [p for p in self.players if p.status in ("active", "allin")]
@@ -117,26 +133,18 @@ class GameState:
         return [p for p in self.players if p.status == "active"]
 
     def get_player_by_session(self, session_id: str) -> PlayerState | None:
-        for p in self.players:
-            if p.session_id == session_id:
-                return p
-        return None
+        return self._idx_by_session.get(session_id)
 
     def get_player_by_id(self, player_id: str) -> PlayerState | None:
-        for p in self.players:
-            if p.player_id == player_id:
-                return p
-        return None
+        return self._idx_by_id.get(player_id)
 
     def add_log(self, message: str) -> None:
-        """Add a log entry to the game log (keep last 100)."""
+        """Add a log entry to the game log (deque auto-trims)."""
         self.game_log.append({
             "time": datetime.now(timezone.utc).strftime("%H:%M:%S"),
             "round": self.round_number,
             "message": message,
         })
-        if len(self.game_log) > 100:
-            self.game_log = self.game_log[-100:]
 
 
 class GameEngine:
@@ -145,6 +153,7 @@ class GameEngine:
 
     def create_game(self, table_id: str, **kwargs: Any) -> GameState:
         state = GameState(table_id=table_id, **kwargs)
+        state._rebuild_indices()
         self.games[table_id] = state
         return state
 
@@ -166,12 +175,17 @@ class GameEngine:
     def add_player(self, table_id: str, player: PlayerState) -> None:
         state = self.games[table_id]
         state.players.append(player)
+        state._idx_by_session[player.session_id] = player
+        state._idx_by_id[player.player_id] = player
 
     def remove_player(self, table_id: str, session_id: str) -> PlayerState | None:
         state = self.games[table_id]
         for i, p in enumerate(state.players):
             if p.session_id == session_id:
-                return state.players.pop(i)
+                removed = state.players.pop(i)
+                state._idx_by_session.pop(removed.session_id, None)
+                state._idx_by_id.pop(removed.player_id, None)
+                return removed
         return None
 
     # ---- Deal a new hand ----
@@ -213,7 +227,7 @@ class GameEngine:
 
         # Check Danilka event (10% chance)
         danilka_event = False
-        if state.dealer_type == "danilka" and random.random() < 0.05:
+        if state.dealer_type == "danilka" and random.random() < DANILKA_EVENT_CHANCE:
             danilka_event = True
             state.danilka_event_this_round = True
 
@@ -279,8 +293,8 @@ class GameEngine:
 
         for p in active:
             found = False
-            # Try up to 50 times to find a non-colliding hand
-            for _ in range(50):
+            # Try up to DANILKA_MAX_DEAL_ATTEMPTS times to find a non-colliding hand
+            for _ in range(DANILKA_MAX_DEAL_ATTEMPTS):
                 hand_type = random.choice(DANILKA_STRONG_HANDS)
                 r1, r2 = hand_type
                 if r1 == r2:
@@ -816,7 +830,7 @@ class GameEngine:
             snapshot["frol_total_tips"] = state.frol_total_tips
 
         # Game action log
-        snapshot["game_log"] = state.game_log[-50:]
+        snapshot["game_log"] = list(state.game_log)[-50:]
 
         return snapshot
 
