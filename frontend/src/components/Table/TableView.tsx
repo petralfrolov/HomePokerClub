@@ -28,6 +28,7 @@ export function TableView() {
   const stallingAccused = useStore((s) => s.stallingAccused);
   const kickedCashout = useStore((s) => s.kickedCashout);
   const clearAfkTable = useStore((s) => s.clearAfkTable);
+  const setGameState = useStore((s) => s.setGameState);
   const [ledgerCollapsed, setLedgerCollapsed] = useState(false);
 
   useWebSocket(tableId || null);
@@ -43,6 +44,8 @@ export function TableView() {
     if (!tableId) return;
     setTableId(tableId);
     clearAfkTable();
+    // Clear stale game state from previous table
+    setGameState(null);
 
     api.getTable(tableId).then((data) => {
       setTableConfig(data);
@@ -53,6 +56,7 @@ export function TableView() {
     return () => {
       setTableId(null);
       setTableConfig(null);
+      setGameState(null);
     };
   }, [tableId]);
 

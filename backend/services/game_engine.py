@@ -153,6 +153,9 @@ class GameEngine:
 
     def remove_game(self, table_id: str) -> None:
         self.games.pop(table_id, None)
+        # Clean up associated rebuy requests to prevent memory leaks
+        from backend.services.rebuy import rebuy_manager
+        rebuy_manager.clear_table(table_id)
 
     def touch(self, table_id: str) -> None:
         """Update the last activity timestamp for a table."""
@@ -275,6 +278,7 @@ class GameEngine:
         dealt_cards: set[int] = set()
 
         for p in active:
+            found = False
             # Try up to 50 times to find a non-colliding hand
             for _ in range(50):
                 hand_type = random.choice(DANILKA_STRONG_HANDS)
@@ -296,8 +300,19 @@ class GameEngine:
                     s = random.choice(suits)
                     c1 = Card.new(f"{r1}{s}")
                     c2 = Card.new(f"{r2}{s}")
-                if c1 not in dealt_cards and c2 not in dealt_cards:
+                if c1 not in dealt_cards and c2 not in dealt_cards and c1 != c2:
+                    found = True
                     break
+
+            if not found:
+                # Fallback: deal from remaining deck cards
+                remaining = [c for c in Deck().cards if c not in dealt_cards]
+                if len(remaining) >= 2:
+                    c1, c2 = remaining[0], remaining[1]
+                else:
+                    logger.error("Danilka dealing: not enough cards remaining")
+                    c1 = c2 = 0
+
             dealt_cards.add(c1)
             dealt_cards.add(c2)
             p.hole_cards = [c1, c2]

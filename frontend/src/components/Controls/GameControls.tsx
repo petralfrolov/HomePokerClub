@@ -7,9 +7,6 @@ import { S } from '../../strings';
 import { CardDisplay } from '../Table/CardDisplay';
 import './Controls.css';
 
-// Persist drag position across re-renders
-const dragPosition = { x: 0, y: 0 };
-
 export function GameControls() {
   const sessionId = useStore((s) => s.sessionId);
   const gameState = useStore((s) => s.gameState);
@@ -22,6 +19,7 @@ export function GameControls() {
   const [rebuyAmount, setRebuyAmount] = useState<number>(0);
   const [rebuyTimeLeft, setRebuyTimeLeft] = useState<number>(0);
   const dragRef = useRef<HTMLDivElement>(null);
+  const dragPositionRef = useRef({ x: 0, y: 0 });
   const navigate = useNavigate();
   const setTableId = useStore((s) => s.setTableId);
   const setGameState = useStore((s) => s.setGameState);
@@ -247,10 +245,10 @@ export function GameControls() {
       dragMomentum={false}
       dragElastic={0}
       initial={false}
-      style={{ x: dragPosition.x, y: dragPosition.y, cursor: 'grab' }}
+      style={{ x: dragPositionRef.current.x, y: dragPositionRef.current.y, cursor: 'grab' }}
       onDragEnd={(_e, info) => {
-        dragPosition.x += info.offset.x;
-        dragPosition.y += info.offset.y;
+        dragPositionRef.current.x += info.offset.x;
+        dragPositionRef.current.y += info.offset.y;
       }}
       whileDrag={{ cursor: 'grabbing' }}
     >

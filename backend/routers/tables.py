@@ -1,7 +1,11 @@
 """Table game actions router — actions, start, social, dealer events."""
 
+import asyncio
 import json
+import logging
+import time
 import uuid
+from collections import defaultdict
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -24,7 +28,33 @@ from backend.services.timer import timer_manager
 from backend.services.rebuy import rebuy_manager
 from backend.ws.manager import manager as ws_manager
 
+logger = logging.getLogger("poker.tables")
+
 router = APIRouter(prefix="/api/tables/{table_id}", tags=["game"])
+
+# --- Per-table asyncio lock to prevent race conditions between
+#     timer on_timeout, HTTP /action, and cashout paths. ---
+_table_locks: dict[str, asyncio.Lock] = defaultdict(asyncio.Lock)
+
+
+def _get_table_lock(table_id: str) -> asyncio.Lock:
+    return _table_locks[table_id]
+
+
+# --- Simple in-memory rate limiter for /action endpoint ---
+_ACTION_RATE_LIMIT = 5  # max requests per window
+_ACTION_RATE_WINDOW = 2.0  # window in seconds
+_action_timestamps: dict[str, list[float]] = defaultdict(list)
+
+
+def _check_rate_limit(session_id: str) -> None:
+    now = time.monotonic()
+    timestamps = _action_timestamps[session_id]
+    # Prune old entries
+    _action_timestamps[session_id] = [t for t in timestamps if now - t < _ACTION_RATE_WINDOW]
+    if len(_action_timestamps[session_id]) >= _ACTION_RATE_LIMIT:
+        raise HTTPException(429, "Too many requests, slow down")
+    _action_timestamps[session_id].append(now)
 
 
 def _get_game_or_404(table_id: str):
@@ -81,41 +111,42 @@ async def _start_turn_timer(table_id: str, game):
         return
 
     async def on_timeout():
-        # Guard: if by the time this fires the player already acted (race with HTTP request),
-        # bail out — the HTTP handler already handled state changes and broadcasts.
-        if (
-            game.current_player_index != current_player.seat_index
-            or current_player.status != "active"
-        ):
-            return
+        async with _get_table_lock(table_id):
+            # Guard: if by the time this fires the player already acted (race with HTTP request),
+            # bail out — the HTTP handler already handled state changes and broadcasts.
+            if (
+                game.current_player_index != current_player.seat_index
+                or current_player.status != "active"
+            ):
+                return
 
-        # Save time bank remainder before auto-action
-        tmr = timer_manager.get_timer(table_id)
-        if tmr:
-            current_player.time_bank = tmr.remaining_time_bank
-        result = game_engine.auto_action(game, current_player)
-        actual_action = result.get("action", "check")
-        for k, v in result.items():
-            if k in ("folded",):
-                actual_action = "fold"
-            elif k in ("checked",):
-                actual_action = "check"
+            # Save time bank remainder before auto-action
+            tmr = timer_manager.get_timer(table_id)
+            if tmr:
+                current_player.time_bank = tmr.remaining_time_bank
+            result = game_engine.auto_action(game, current_player)
+            actual_action = result.get("action", "check")
+            for k, v in result.items():
+                if k in ("folded",):
+                    actual_action = "fold"
+                elif k in ("checked",):
+                    actual_action = "check"
 
-        # Auto-fold → mark player as AFK so next turns skip them too
-        if actual_action == "fold":
-            current_player.away = True
-            await ws_manager.broadcast_all(table_id, "player_away", {
+            # Auto-fold → mark player as AFK so next turns skip them too
+            if actual_action == "fold":
+                current_player.away = True
+                await ws_manager.broadcast_all(table_id, "player_away", {
+                    "player_id": current_player.player_id,
+                    "away": True,
+                })
+
+            await ws_manager.broadcast_all(table_id, "action_made", {
                 "player_id": current_player.player_id,
-                "away": True,
+                "action": actual_action,
+                "auto": True,
             })
-
-        await ws_manager.broadcast_all(table_id, "action_made", {
-            "player_id": current_player.player_id,
-            "action": actual_action,
-            "auto": True,
-        })
-        await _broadcast_game_state(table_id, game)
-        await _check_hand_end(table_id, game, result)
+            await _broadcast_game_state(table_id, game)
+            await _check_hand_end(table_id, game, result)
 
     async def on_time_bank_start():
         await ws_manager.broadcast_all(table_id, "time_bank_update", {
@@ -337,6 +368,14 @@ async def _check_hand_end(table_id: str, game, result: dict):
         blind_event = game_engine.check_blind_increase(game)
         if blind_event:
             await ws_manager.broadcast_all(table_id, "blinds_raised", blind_event)
+            # Persist updated blinds to DB
+            async with async_session_factory() as db:
+                tbl = await db.execute(select(Table).where(Table.id == table_id))
+                tbl_obj = tbl.scalar_one_or_none()
+                if tbl_obj:
+                    tbl_obj.blind_small = game.blind_small
+                    tbl_obj.blind_big = game.blind_big
+                    await db.commit()
 
         # Check tournament game over (one player left with chips)
         if game.game_type == "tournament":
@@ -475,58 +514,59 @@ async def start_game(table_id: str, body: StartGame, db: AsyncSession = Depends(
 
 @router.post("/action")
 async def game_action(table_id: str, body: GameAction, db: AsyncSession = Depends(get_db)):
+    _check_rate_limit(body.session_id)
     game = _get_game_or_404(table_id)
     player = _get_player_or_403(game, body.session_id)
 
-    # Save remaining time bank before canceling timer
-    tmr = timer_manager.get_timer(table_id)
-    if tmr and tmr.player_id == player.player_id:
-        player.time_bank = tmr.remaining_time_bank
+    async with _get_table_lock(table_id):
+        # Cancel timer and save remaining time bank atomically under lock
+        tmr = timer_manager.get_timer(table_id)
+        if tmr and tmr.player_id == player.player_id:
+            player.time_bank = tmr.remaining_time_bank
+        timer_manager.cancel_timer(table_id)
 
-    timer_manager.cancel_timer(table_id)
+        result = game_engine.process_action(game, body.session_id, body.action, body.amount)
 
-    result = game_engine.process_action(game, body.session_id, body.action, body.amount)
+        if "error" in result:
+            error_msg = result["error"]
+            # Race condition: timer auto-acted just before this request arrived.
+            # Don't restart the timer (on_timeout already handles it) — just return
+            # the current state so the client can update via WebSocket.
+            if error_msg in ("Not your turn", "Cannot act in current status", "No active turn"):
+                snapshot = game_engine.get_game_snapshot(game, for_session_id=body.session_id)
+                return {"ok": True, "raced": True, "game_state_snapshot": snapshot}
+            # Genuine invalid action (bad amount, nothing to call, etc.) –
+            # restart the timer so the player can try again.
+            await _start_turn_timer(table_id, game)
+            raise HTTPException(400, error_msg)
 
-    if "error" in result:
-        error_msg = result["error"]
-        # Race condition: timer auto-acted just before this request arrived.
-        # Don't restart the timer (on_timeout already handles it) — just return
-        # the current state so the client can update via WebSocket.
-        if error_msg in ("Not your turn", "Cannot act in current status", "No active turn"):
-            snapshot = game_engine.get_game_snapshot(game, for_session_id=body.session_id)
-            return {"ok": True, "raced": True, "game_state_snapshot": snapshot}
-        # Genuine invalid action (bad amount, nothing to call, etc.) –
-        # restart the timer so the player can try again.
-        await _start_turn_timer(table_id, game)
-        raise HTTPException(400, error_msg)
+        # Log action
+        if game.round_id:
+            player = game.get_player_by_session(body.session_id)
+            action_log = RoundAction(
+                round_id=game.round_id,
+                player_id=player.player_id if player else "",
+                action=body.action,
+                amount=body.amount,
+                stage=game.stage,
+            )
+            db.add(action_log)
+            await db.commit()
 
-    # Log action
-    if game.round_id:
-        player = game.get_player_by_session(body.session_id)
-        action_log = RoundAction(
-            round_id=game.round_id,
-            player_id=player.player_id if player else "",
-            action=body.action,
-            amount=body.amount,
-            stage=game.stage,
-        )
-        db.add(action_log)
-        await db.commit()
+        await ws_manager.broadcast_all(table_id, "action_made", {
+            "player_id": result.get("player_id"),
+            "action": body.action,
+            "amount": body.amount,
+        })
 
-    await ws_manager.broadcast_all(table_id, "action_made", {
-        "player_id": result.get("player_id"),
-        "action": body.action,
-        "amount": body.amount,
-    })
+        game_engine.touch(table_id)
+        hand_ended = await _check_hand_end(table_id, game, result)
 
-    game_engine.touch(table_id)
-    hand_ended = await _check_hand_end(table_id, game, result)
+        if not hand_ended:
+            await _broadcast_game_state(table_id, game)
 
-    if not hand_ended:
-        await _broadcast_game_state(table_id, game)
-
-    snapshot = game_engine.get_game_snapshot(game, for_session_id=body.session_id)
-    return {"ok": True, "game_state_snapshot": snapshot}
+        snapshot = game_engine.get_game_snapshot(game, for_session_id=body.session_id)
+        return {"ok": True, "game_state_snapshot": snapshot}
 
 
 # ---- Rebuy ----

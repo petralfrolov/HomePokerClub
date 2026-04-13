@@ -5,6 +5,7 @@ Poker App — FastAPI main entry point.
 import asyncio
 import json
 import logging
+import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
@@ -175,6 +176,12 @@ async def websocket_endpoint(websocket: WebSocket, table_id: str, session_id: st
         await websocket.close(code=4001, reason="session_id required")
         return
 
+    try:
+        uuid.UUID(session_id, version=4)
+    except (ValueError, AttributeError):
+        await websocket.close(code=4002, reason="Invalid session_id format")
+        return
+
     await ws_manager.connect(table_id, session_id, websocket)
 
     # Send initial game state
@@ -198,6 +205,7 @@ async def websocket_endpoint(websocket: WebSocket, table_id: str, session_id: st
     except WebSocketDisconnect:
         ws_manager.disconnect(table_id, session_id)
     except Exception:
+        logger.exception("WebSocket error for session %s at table %s", session_id, table_id)
         ws_manager.disconnect(table_id, session_id)
 
 

@@ -21,6 +21,16 @@ from backend.ws.manager import manager as ws_manager
 router = APIRouter(prefix="/api/tables", tags=["tables"])
 
 
+def _validate_session_id(session_id: str) -> None:
+    """Validate that session_id is a valid UUID v4."""
+    try:
+        val = uuid.UUID(session_id, version=4)
+        if str(val) != session_id:
+            raise ValueError
+    except (ValueError, AttributeError):
+        raise HTTPException(400, "Invalid session_id format (must be UUID v4)")
+
+
 async def _ensure_session(db: AsyncSession, session_id: str) -> Session:
     result = await db.execute(select(Session).where(Session.id == session_id))
     session = result.scalar_one_or_none()
@@ -52,6 +62,8 @@ async def list_tables(db: AsyncSession = Depends(get_db)):
 @router.post("", response_model=TableCreated)
 async def create_table(body: TableCreate, db: AsyncSession = Depends(get_db)):
     # Validation
+    if body.blind_small >= body.blind_big:
+        raise HTTPException(400, "Small blind must be less than big blind")
     if body.type == "cash" and (body.min_buyin is None or body.max_buyin is None):
         raise HTTPException(400, "Cash game requires min_buyin and max_buyin")
     if body.type == "tournament" and body.starting_stack is None:
@@ -136,6 +148,7 @@ async def get_table(table_id: str, db: AsyncSession = Depends(get_db)):
 
 @router.post("/{table_id}/join", response_model=JoinResult)
 async def join_table(table_id: str, body: JoinTable, db: AsyncSession = Depends(get_db)):
+    _validate_session_id(body.session_id)
     result = await db.execute(select(Table).where(Table.id == table_id))
     table = result.scalar_one_or_none()
     if not table:
@@ -295,6 +308,8 @@ async def delete_table(table_id: str, db: AsyncSession = Depends(get_db)):
 @router.post("/{table_id}/cashout", response_model=OkResponse)
 async def cashout(table_id: str, body: CashoutRequest, db: AsyncSession = Depends(get_db)):
     """Cash out: record current stack as cashout, remove player from table."""
+    from backend.routers.tables import _get_table_lock
+
     game = game_engine.get_game(table_id)
     if not game:
         raise HTTPException(404, "Game not found")
@@ -304,30 +319,31 @@ async def cashout(table_id: str, body: CashoutRequest, db: AsyncSession = Depend
     if not player_state:
         raise HTTPException(403, "Not at this table")
 
-    if game.stage not in ("waiting",) and player_state.status in ("active", "allin"):
-        # Auto-fold the player so they can cash out immediately
-        if player_state.status == "active":
-            player_state.status = "folded"
-            await ws_manager.broadcast_all(table_id, "action_made", {
-                "player_id": player_state.player_id,
-                "action": "fold",
-                "amount": None,
-            })
-        # For all-in players, just mark as folded (forfeit the pot)
-        elif player_state.status == "allin":
-            player_state.status = "folded"
+    async with _get_table_lock(table_id):
+        if game.stage not in ("waiting",) and player_state.status in ("active", "allin"):
+            # Auto-fold the player so they can cash out immediately
+            if player_state.status == "active":
+                player_state.status = "folded"
+                await ws_manager.broadcast_all(table_id, "action_made", {
+                    "player_id": player_state.player_id,
+                    "action": "fold",
+                    "amount": None,
+                })
+            # For all-in players, just mark as folded (forfeit the pot)
+            elif player_state.status == "allin":
+                player_state.status = "folded"
 
-        # Check if this fold ended the hand (1 active player left wins the pot)
-        from backend.routers.tables import _check_hand_end, _start_turn_timer, _broadcast_game_state
-        from backend.services.timer import timer_manager
-        timer_manager.cancel_timer(table_id)
-        advance_result = game_engine._try_advance(game)
-        if advance_result:
-            result_dict = {"advance": advance_result}
-            await _check_hand_end(table_id, game, result_dict)
+            # Check if this fold ended the hand (1 active player left wins the pot)
+            from backend.routers.tables import _check_hand_end, _start_turn_timer, _broadcast_game_state
+            from backend.services.timer import timer_manager
+            timer_manager.cancel_timer(table_id)
+            advance_result = game_engine._try_advance(game)
+            if advance_result:
+                result_dict = {"advance": advance_result}
+                await _check_hand_end(table_id, game, result_dict)
 
-    cashout_amount = player_state.stack
-    player_state.total_cashout += cashout_amount
+        cashout_amount = player_state.stack
+        player_state.total_cashout += cashout_amount
 
     # Save to ledger before removing
     game.cashout_ledger.append({
