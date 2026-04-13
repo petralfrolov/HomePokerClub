@@ -200,6 +200,15 @@
   cursor: not-allowed;
 }
 
+/* Pot percentage badge on call/raise buttons */
+.btn-pot-pct {
+  display: block;
+  font-size: 0.65rem;
+  font-weight: 400;
+  opacity: 0.75;
+  margin-top: 1px;
+}
+
 .control-btn-cancel {
   padding: 0.4rem 0.6rem;
   border: none;
@@ -322,4 +331,97 @@
   width: 80px;
   height: 4px;
   accent-color: var(--text-accent);
+}
+
+/* === Mobile Responsive === */
+@media (max-width: 768px) {
+  .game-controls {
+    left: 0;
+    right: 0;
+    transform: none;
+    gap: 0;
+  }
+
+  .controls-main {
+    padding: 0.3rem 0.6rem 0.5rem;
+    border-radius: 12px 12px 0 0;
+    width: 100%;
+  }
+
+  .controls-row {
+    gap: 0.3rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .control-btn {
+    padding: 0.5rem 0.7rem;
+    font-size: 0.75rem;
+    border-radius: 8px;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .raise-slider-container {
+    min-width: 0;
+  }
+
+  .raise-slider-row {
+    gap: 0.2rem;
+  }
+
+  .raise-step-btn {
+    width: 24px;
+    height: 24px;
+    font-size: 0.85rem;
+  }
+
+  .raise-value {
+    font-size: 0.8rem;
+    min-width: 40px;
+  }
+
+  .raise-presets-row {
+    gap: 0.2rem;
+  }
+
+  .raise-preset-btn {
+    font-size: 0.7rem;
+    padding: 0.15rem 0.5rem;
+  }
+
+  .controls-my-cards {
+    position: fixed;
+    bottom: 140px;
+    left: 8px;
+    z-index: 51;
+  }
+
+  .controls-my-cards .card-medium {
+    width: 50px;
+    height: 72px;
+    font-size: 1rem;
+  }
+
+  .controls-secondary {
+    margin-top: 0.3rem;
+  }
+
+  .control-btn-small {
+    font-size: 0.7rem;
+    padding: 0.25rem 0.6rem;
+  }
+
+  .rebuy-main {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .sound-controls {
+    gap: 0.3rem;
+  }
+
+  .sound-slider {
+    width: 50px;
+  }
 }

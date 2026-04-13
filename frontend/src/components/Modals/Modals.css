@@ -183,3 +183,43 @@
   margin-top: 0.5rem;
   color: var(--text-secondary);
 }
+
+/* === Mobile Responsive === */
+@media (max-width: 768px) {
+  .modal {
+    min-width: 0;
+    width: calc(100vw - 2rem);
+    max-width: 100%;
+    padding: 1.2rem;
+    margin: 1rem;
+    border-radius: 12px;
+  }
+
+  .modal h3 {
+    font-size: 1rem;
+  }
+
+  .form-row {
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .modal-actions {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .modal-actions button {
+    width: 100%;
+  }
+
+  .frol-avatar {
+    width: 60px;
+    height: 60px;
+  }
+
+  .frol-tip-btn {
+    font-size: 0.95rem;
+    padding: 0.8rem;
+  }
+}

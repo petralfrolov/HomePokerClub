@@ -78,3 +78,19 @@ input, select {
   background: var(--bg-secondary);
   border-radius: 3px;
 }
+
+/* === Mobile Responsive === */
+@media (max-width: 768px) {
+  body {
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .app-header {
+    padding: 0.4rem 0.8rem;
+  }
+
+  .app-title {
+    font-size: 1rem;
+  }
+}

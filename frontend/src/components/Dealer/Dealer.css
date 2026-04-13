@@ -71,3 +71,31 @@
   font-size: 3rem;
   pointer-events: none;
 }
+
+/* === Mobile Responsive === */
+@media (max-width: 768px) {
+  .dealer-img {
+    width: 32px;
+    height: 32px;
+  }
+
+  .dealer-name {
+    font-size: 0.6rem;
+  }
+
+  .danilka-banner {
+    padding: 1.2rem 1.5rem;
+  }
+
+  .danilka-icon {
+    font-size: 2rem;
+  }
+
+  .danilka-banner h2 {
+    font-size: 1.1rem;
+  }
+
+  .danilka-banner p {
+    font-size: 0.85rem;
+  }
+}

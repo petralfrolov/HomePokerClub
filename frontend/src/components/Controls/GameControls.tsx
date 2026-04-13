@@ -324,6 +324,9 @@ export function GameControls() {
               disabled={loading}
             >
               {S.call} {callAmount}
+              {gameState.pot > 0 && (
+                <span className="btn-pot-pct">{Math.round((callAmount / gameState.pot) * 100)}%</span>
+              )}
             </button>
           )}
 
@@ -333,6 +336,9 @@ export function GameControls() {
             disabled={loading}
           >
             {S.raise} {effectiveRaise}
+            {gameState.pot > 0 && (
+              <span className="btn-pot-pct">{Math.round((effectiveRaise / gameState.pot) * 100)}%</span>
+            )}
           </button>
 
           <button

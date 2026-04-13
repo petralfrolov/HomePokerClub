@@ -66,6 +66,7 @@ export function useWebSocket(tableId: string | null) {
         break;
       case 'frol_tip_request':
         setFrolTipRequest(data as any);
+        playSound('frol_tips');
         break;
       case 'rebuy_requested':
         setPendingRebuy(data as any);
@@ -180,13 +181,15 @@ export function useWebSocket(tableId: string | null) {
         else if (act === 'raise') playSound('raise');
         break;
       }
+      case 'tip_given':
+        playSound('tips');
+        break;
       case 'community_cards':
       case 'player_joined':
       case 'player_left':
       case 'pot_update':
       case 'card_revealed':
       case 'player_away':
-      case 'tip_given':
       case 'rebuy_denied':
       case 'player_avatar_updated':
         // These events trigger game_state refresh from server

@@ -285,3 +285,71 @@
 .context-menu-item-danger:hover {
   background: rgba(231, 76, 60, 0.2) !important;
 }
+
+/* === Mobile Responsive === */
+@media (max-width: 768px) {
+  .player-avatar-container {
+    width: 40px;
+    height: 40px;
+  }
+
+  .player-avatar {
+    width: 40px;
+    height: 40px;
+  }
+
+  .player-nickname {
+    font-size: 0.6rem;
+    max-width: 55px;
+  }
+
+  .player-stack {
+    font-size: 0.55rem;
+  }
+
+  .player-hand-name {
+    font-size: 0.5rem;
+  }
+
+  .player-bet {
+    font-size: 0.6rem;
+    padding: 1px 5px;
+    bottom: -22px;
+  }
+
+  .player-cards {
+    right: -28px;
+    top: -8px;
+  }
+
+  .player-cards .card-small {
+    width: 20px;
+    height: 28px;
+    font-size: 0.45rem;
+    border-radius: 2px;
+  }
+
+  .badge {
+    font-size: 7px;
+    padding: 1px 3px;
+  }
+
+  .badge-dealer {
+    width: 14px;
+    height: 14px;
+    font-size: 7px;
+  }
+
+  .timer-bar-container {
+    width: 44px;
+    height: 3px;
+  }
+
+  .context-menu {
+    left: auto;
+    right: 0;
+    min-width: 160px;
+    padding: 0.4rem;
+    font-size: 0.8rem;
+  }
+}

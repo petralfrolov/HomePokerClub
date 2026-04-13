@@ -219,3 +219,44 @@
 .afk-badge-stack {
   font-variant-numeric: tabular-nums;
 }
+
+/* === Mobile Responsive === */
+@media (max-width: 768px) {
+  .lobby {
+    padding: 1rem;
+  }
+
+  .lobby-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.8rem;
+    margin-bottom: 1.2rem;
+  }
+
+  .lobby-header h2 {
+    font-size: 1.2rem;
+  }
+
+  .nick-form {
+    width: 100%;
+  }
+
+  .nick-form input {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .nick-display {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .tables-grid {
+    grid-template-columns: 1fr;
+    gap: 0.8rem;
+  }
+
+  .table-card {
+    padding: 1rem;
+  }
+}
