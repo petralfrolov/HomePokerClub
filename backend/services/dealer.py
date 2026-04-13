@@ -7,10 +7,15 @@ import random
 import logging
 from typing import Any
 
-logger = logging.getLogger("poker.dealer")
+from backend.config import (
+    FROL_TIP_TIMEOUT,
+    FROL_DEFAULT_TIP_PERCENT,
+    FROL_MIN_TIP_PERCENT,
+    FROL_MAX_TIP_PERCENT,
+    FROL_TIP_STEP,
+)
 
-FROL_TIP_TIMEOUT = 15  # seconds
-FROL_DEFAULT_TIP_PERCENT = 5  # auto-tip if timeout
+logger = logging.getLogger("poker.dealer")
 
 # Frol decline button types
 DECLINE_FLYING = "flying"
@@ -31,22 +36,22 @@ def get_frol_tip_request(pot: int, winner_id: str) -> dict[str, Any]:
         "winner_id": winner_id,
         "decline_button_type": decline_type,
         "tip_timeout": FROL_TIP_TIMEOUT,
-        "min_tip_percent": 2,
-        "max_tip_percent": 10,
-        "tip_step": 1,
+        "min_tip_percent": FROL_MIN_TIP_PERCENT,
+        "max_tip_percent": FROL_MAX_TIP_PERCENT,
+        "tip_step": FROL_TIP_STEP,
     }
 
 
 def calculate_frol_tip(pot: int, percent: int) -> int:
-    clamped = max(2, min(10, percent))
+    clamped = max(FROL_MIN_TIP_PERCENT, min(FROL_MAX_TIP_PERCENT, percent))
     return (pot * clamped) // 100
 
 
 def handle_frol_decline(decline_type: str, pot: int) -> dict[str, Any]:
     """Handle Frol decline button press."""
     if decline_type == DECLINE_TRICK:
-        # Trick button: user actually tips 5%
-        tip_amount = pot * FROL_DEFAULT_TIP_PERCENT // 100
+        # Trick button: user actually tips max percent
+        tip_amount = pot * FROL_MAX_TIP_PERCENT // 100
         return {
             "declined": False,
             "reason": "trick_button",

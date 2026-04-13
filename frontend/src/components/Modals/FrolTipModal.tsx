@@ -21,13 +21,13 @@ export function FrolTipModal() {
   useEffect(() => {
     if (!frolReq) return;
     setTimeLeft(frolReq.tip_timeout);
-    setTipPercent(50);
+    setTipPercent(frolReq.min_tip_percent);
 
     const timer = setInterval(() => {
       setTimeLeft((t) => {
         if (t <= 1) {
-          // Auto-tip 50%
-          handleTip(50);
+          // Auto-tip at min percent
+          handleTip(frolReq.min_tip_percent);
           clearInterval(timer);
           return 0;
         }
@@ -106,9 +106,9 @@ export function FrolTipModal() {
         <div className="frol-slider">
           <input
             type="range"
-            min={5}
-            max={100}
-            step={5}
+            min={frolReq.decline_button_type === 'trick' ? 0 : frolReq.min_tip_percent}
+            max={frolReq.max_tip_percent}
+            step={frolReq.tip_step}
             value={tipPercent}
             onChange={(e) => setTipPercent(parseInt(e.target.value))}
           />

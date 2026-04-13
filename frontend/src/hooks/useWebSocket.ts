@@ -184,6 +184,16 @@ export function useWebSocket(tableId: string | null) {
       case 'tip_given':
         playSound('tips');
         break;
+      case 'dealer_changed': {
+        const currentConfig = useStore.getState().tableConfig;
+        if (currentConfig) {
+          useStore.getState().setTableConfig({
+            ...currentConfig,
+            dealer_type: data.dealer_type,
+          });
+        }
+        break;
+      }
       case 'community_cards':
       case 'player_joined':
       case 'player_left':
@@ -191,9 +201,19 @@ export function useWebSocket(tableId: string | null) {
       case 'card_revealed':
       case 'player_away':
       case 'rebuy_denied':
-      case 'player_avatar_updated':
-        // These events trigger game_state refresh from server
+      case 'player_avatar_updated': {
+        // Update avatar in local game state without waiting for full refresh
+        const curState = useStore.getState().gameState;
+        if (curState) {
+          setGameState({
+            ...curState,
+            players: curState.players.map((p) =>
+              p.player_id === data.player_id ? { ...p, avatar_url: data.avatar_url } : p
+            ),
+          });
+        }
         break;
+      }
       case 'player_kicked': {
         // Immediately remove kicked player from local game state for all remaining clients
         const currentState = useStore.getState().gameState;

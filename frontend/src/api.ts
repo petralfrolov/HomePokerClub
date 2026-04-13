@@ -135,6 +135,12 @@ export const api = {
       body: JSON.stringify({ session_id }),
     }),
 
+  changeDealer: (tableId: string, data: { session_id: string; dealer_type: string }) =>
+    request<{ ok: boolean }>(`/tables/${tableId}/change-dealer`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
   // Avatar
   uploadAvatar: async (session_id: string, file: File) => {
     const form = new FormData();

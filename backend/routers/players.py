@@ -61,10 +61,19 @@ async def upload_avatar(
 
     # Update in-memory game state
     from backend.services.game_engine import game_engine
+    from backend.ws.manager import manager as ws_manager
     for game in game_engine.games.values():
         for p in game.players:
             if p.session_id == session_id:
                 p.avatar_url = avatar_url
+                # Broadcast to all players at this table
+                import asyncio
+                asyncio.ensure_future(
+                    ws_manager.broadcast_all(game.table_id, "player_avatar_updated", {
+                        "player_id": p.player_id,
+                        "avatar_url": avatar_url,
+                    })
+                )
 
     return AvatarResponse(avatar_url=avatar_url)
 

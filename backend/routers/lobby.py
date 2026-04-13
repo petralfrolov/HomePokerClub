@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.config import MAX_PLAYERS_PER_TABLE
+from backend.config import MAX_PLAYERS_PER_TABLE, INVITE_CODE_BYTES, DEFAULT_TOURNAMENT_BLIND_INTERVAL
 from backend.database import get_db
 from backend.models.tables import Table, Player, Session, GameRound, RoundAction
 from backend.schemas.schemas import (
@@ -70,7 +70,7 @@ async def create_table(body: TableCreate, db: AsyncSession = Depends(get_db)):
         raise HTTPException(400, "Tournament requires starting_stack")
 
     table_id = str(uuid.uuid4())
-    invite_code = secrets.token_urlsafe(6)
+    invite_code = secrets.token_urlsafe(INVITE_CODE_BYTES)
 
     table = Table(
         id=table_id,
@@ -86,7 +86,7 @@ async def create_table(body: TableCreate, db: AsyncSession = Depends(get_db)):
         min_buyin=body.min_buyin,
         max_buyin=body.max_buyin,
         starting_stack=body.starting_stack,
-        tournament_blind_interval=body.tournament_blind_interval or 10,
+        tournament_blind_interval=body.tournament_blind_interval or DEFAULT_TOURNAMENT_BLIND_INTERVAL,
     )
     db.add(table)
     await db.commit()
@@ -100,7 +100,7 @@ async def create_table(body: TableCreate, db: AsyncSession = Depends(get_db)):
         time_per_move=body.time_per_move,
         time_bank_max=body.time_bank,
         dealer_type=body.dealer_type,
-        tournament_blind_interval=body.tournament_blind_interval or 10,
+        tournament_blind_interval=body.tournament_blind_interval or DEFAULT_TOURNAMENT_BLIND_INTERVAL,
     )
 
     return TableCreated(table_id=table_id, invite_code=invite_code)

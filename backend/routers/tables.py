@@ -12,7 +12,16 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.config import ACTION_RATE_LIMIT, ACTION_RATE_WINDOW
+from backend.config import (
+    ACTION_RATE_LIMIT,
+    ACTION_RATE_WINDOW,
+    FROL_TIP_WAIT_SECONDS,
+    SHOWDOWN_DELAY,
+    FOLD_WIN_DELAY,
+    DANILKA_RESTART_DELAY,
+    REBUY_WINDOW_TIMEOUT,
+    STALLING_TIME_BANK_PENALTY,
+)
 from backend.database import get_db
 from backend.database import async_session as async_session_factory
 from backend.models.tables import Table, Player, GameRound, RoundAction
@@ -21,6 +30,7 @@ from backend.schemas.schemas import (
     TipPlayer, AccuseStalling, RevealCard, AwayStatus,
     FrolTip, FrolDecline, OkResponse,
     ActionResponse, RebuyRequestResponse, AccuseStallingResponse, FrolDeclineResponse,
+    ChangeDealerType,
 )
 from backend.services.game_engine import game_engine, PlayerState
 from backend.services.dealer import (
@@ -227,11 +237,11 @@ async def _post_hand_continuation(table_id: str, game, end_data: dict):
     """Background task: wait for frol tip, handle pending cashouts, rebuy window, then auto-start."""
     import asyncio
 
-    delay = 5 if end_data.get("showdown") else 2
+    delay = SHOWDOWN_DELAY if end_data.get("showdown") else FOLD_WIN_DELAY
 
     # Wait for Frol tip resolution (up to tip_timeout + buffer)
     if getattr(game, '_frol_tip_pending', False):
-        for _ in range(20):
+        for _ in range(FROL_TIP_WAIT_SECONDS):
             await asyncio.sleep(1)
             if not getattr(game, '_frol_tip_pending', False):
                 break
@@ -264,7 +274,7 @@ async def _post_hand_continuation(table_id: str, game, end_data: dict):
         # Broadcast rebuy window to all clients
         await ws_manager.broadcast_all(table_id, "rebuy_window", {
             "bust_player_ids": [p.player_id for p in bust_players],
-            "timeout": 20,
+            "timeout": REBUY_WINDOW_TIMEOUT,
         })
 
         game._rebuy_window_active = True
@@ -272,8 +282,8 @@ async def _post_hand_continuation(table_id: str, game, end_data: dict):
 
         await asyncio.sleep(delay)
 
-        # Wait up to 20 seconds for rebuy requests
-        for _ in range(20):
+        # Wait up to REBUY_WINDOW_TIMEOUT seconds for rebuy requests
+        for _ in range(REBUY_WINDOW_TIMEOUT):
             await asyncio.sleep(1)
             still_bust = [p for p in game.players if p.player_id in game._rebuy_window_bust_ids and p.status == "bust"]
             if not still_bust:
@@ -324,7 +334,7 @@ async def _post_hand_continuation(table_id: str, game, end_data: dict):
 async def _danilka_restart(table_id: str, game):
     """Background task: restart after danilka cancel."""
     import asyncio
-    await asyncio.sleep(3)
+    await asyncio.sleep(DANILKA_RESTART_DELAY)
     await _auto_start_next_hand(table_id, game)
 
 
@@ -724,18 +734,18 @@ async def accuse_stalling(table_id: str, body: AccuseStalling):
         raise HTTPException(400, "Already accused this player this hand")
     accusations.add(target.player_id)
 
-    # Reduce time bank to 10
-    target.time_bank = 10
+    # Reduce time bank
+    target.time_bank = STALLING_TIME_BANK_PENALTY
     timer = timer_manager.get_timer(table_id)
     if timer:
-        timer.reduce_time_bank(10)
+        timer.reduce_time_bank(STALLING_TIME_BANK_PENALTY)
 
     await ws_manager.broadcast_all(table_id, "stalling_accused", {
         "accuser_id": accuser.player_id,
         "target_id": target.player_id,
     })
 
-    return AccuseStallingResponse(new_time_bank=10)
+    return AccuseStallingResponse(new_time_bank=STALLING_TIME_BANK_PENALTY)
 
 
 @router.post("/reveal-card", response_model=OkResponse)
@@ -810,9 +820,10 @@ async def frol_tip_decline(table_id: str, body: FrolDecline):
     # Check if there's a pending frol tip request for this player
     last_tip_req = getattr(game, '_last_frol_tip_request', None)
     if last_tip_req and last_tip_req.get("decline_button_type") == "trick":
-        # Trick button: user actually pays 100% of pot
+        # Trick button: user actually pays max_tip_percent of pot
         pot = last_tip_req.get("pot", 0)
-        tip_amount = min(pot, player.stack)
+        max_pct = last_tip_req.get("max_tip_percent", 10)
+        tip_amount = min((pot * max_pct) // 100, player.stack)
         player.stack -= tip_amount
         game.frol_total_tips += tip_amount
         game._frol_tip_pending = False
@@ -827,3 +838,29 @@ async def frol_tip_decline(table_id: str, body: FrolDecline):
 
     game._frol_tip_pending = False
     return FrolDeclineResponse()
+
+
+# ---- Change dealer type ----
+
+@router.post("/change-dealer", response_model=OkResponse)
+async def change_dealer_type(table_id: str, body: ChangeDealerType, db: AsyncSession = Depends(get_db)):
+    game = _get_game_or_404(table_id)
+
+    # Verify admin
+    result = await db.execute(select(Table).where(Table.id == table_id))
+    table = result.scalar_one_or_none()
+    if not table or table.admin_session_id != body.session_id:
+        raise HTTPException(403, "Only admin can change dealer type")
+
+    # Update in DB
+    table.dealer_type = body.dealer_type
+    await db.commit()
+
+    # Update in-memory game state (takes effect next round)
+    game.dealer_type = body.dealer_type
+
+    await ws_manager.broadcast_all(table_id, "dealer_changed", {
+        "dealer_type": body.dealer_type,
+    })
+
+    return OkResponse()

@@ -147,11 +147,16 @@ class KickPlayer(BaseModel):
 
 class FrolTip(BaseModel):
     session_id: str
-    amount: int = Field(..., gt=0)
+    amount: int = Field(..., ge=0)
 
 
 class FrolDecline(BaseModel):
     session_id: str
+
+
+class ChangeDealerType(BaseModel):
+    session_id: str
+    dealer_type: str = Field(..., pattern=r"^(robot|frol|danilka)$")
 
 
 # ---------- Avatar ----------

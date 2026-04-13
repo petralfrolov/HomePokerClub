@@ -24,6 +24,43 @@
   font-weight: 600;
 }
 
+/* Dealer context menu for admin */
+.dealer-context-menu {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-secondary);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  padding: 0.3rem;
+  z-index: 100;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 100px;
+}
+
+.dealer-menu-item {
+  display: block;
+  width: 100%;
+  text-align: center;
+  padding: 0.35rem 0.6rem;
+  border: none;
+  background: none;
+  color: var(--text-primary);
+  font-size: 0.8rem;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background 0.2s;
+  white-space: nowrap;
+}
+
+.dealer-menu-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
 /* Danilka overlay */
 .danilka-overlay {
   position: fixed;
