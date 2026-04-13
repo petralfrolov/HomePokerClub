@@ -239,6 +239,19 @@ async def _post_hand_continuation(table_id: str, game, end_data: dict):
 
     delay = SHOWDOWN_DELAY if end_data.get("showdown") else FOLD_WIN_DELAY
 
+    # Broadcast rebuy window BEFORE Frol tip wait, so bust players see the UI immediately.
+    bust_players = [p for p in game.players if p.status == "bust"]
+
+    if bust_players and game.stage == "waiting":
+        game._rebuy_window_active = True
+        game._rebuy_window_bust_ids = {p.player_id for p in bust_players}
+
+        # Broadcast rebuy window to all clients
+        await ws_manager.broadcast_all(table_id, "rebuy_window", {
+            "bust_player_ids": [p.player_id for p in bust_players],
+            "timeout": REBUY_WINDOW_TIMEOUT,
+        })
+
     # Wait for Frol tip resolution (up to tip_timeout + buffer)
     if getattr(game, '_frol_tip_pending', False):
         for _ in range(FROL_TIP_WAIT_SECONDS):
@@ -271,15 +284,7 @@ async def _post_hand_continuation(table_id: str, game, end_data: dict):
     non_bust = [p for p in game.players if p.status != "bust" and p.stack > 0]
 
     if bust_players and game.stage == "waiting":
-        # Broadcast rebuy window to all clients
-        await ws_manager.broadcast_all(table_id, "rebuy_window", {
-            "bust_player_ids": [p.player_id for p in bust_players],
-            "timeout": REBUY_WINDOW_TIMEOUT,
-        })
-
-        game._rebuy_window_active = True
-        game._rebuy_window_bust_ids = {p.player_id for p in bust_players}
-
+        # rebuy_window was already broadcast above; now wait for rebuy requests
         await asyncio.sleep(delay)
 
         # Wait up to REBUY_WINDOW_TIMEOUT seconds for rebuy requests

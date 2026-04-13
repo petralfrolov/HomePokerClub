@@ -70,19 +70,16 @@ export function FrolTipModal() {
   const handleDecline = useCallback(async () => {
     if (!frolReq || !tableId) return;
 
-    if (frolReq.decline_button_type === 'trick') {
-      // Trick button: actually tip 100%
-      await handleTip(100);
-      return;
-    }
-
+    // All decline types go through the backend decline endpoint.
+    // For 'trick', the backend charges max_tip_percent.
+    // For 'flying'/'invisible', the backend does a real decline.
     try {
       await api.frolDecline(tableId, sessionId);
     } catch (e) {
       console.error(e);
     }
     setFrolTipRequest(null);
-  }, [frolReq, tableId, sessionId, handleTip, setFrolTipRequest]);
+  }, [frolReq, tableId, sessionId, setFrolTipRequest]);
 
   if (!frolReq) return null;
 
