@@ -447,15 +447,15 @@
   }
 
   .card-small {
-    width: 36px;
-    height: 52px;
-    font-size: 0.7rem;
+    width: calc(36px * var(--scale-community-card));
+    height: calc(52px * var(--scale-community-card));
+    font-size: calc(0.7rem * var(--scale-community-card));
   }
 
   .card-medium {
-    width: 50px;
-    height: 72px;
-    font-size: 1rem;
+    width: calc(50px * var(--scale-community-card));
+    height: calc(72px * var(--scale-community-card));
+    font-size: calc(1rem * var(--scale-community-card));
   }
 
   .cashout-ledger {
