@@ -15,6 +15,13 @@
   --timer-green: #27ae60;
   --timer-yellow: #f39c12;
   --timer-red: #e74c3c;
+
+  /* Scalable UI (set by SettingsPanel) */
+  --scale-avatar: 1;
+  --scale-font: 1;
+  --scale-community-card: 1;
+  --scale-player-card: 1;
+  --scale-controls: 1;
 }
 
 * {

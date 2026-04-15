@@ -13,6 +13,7 @@ import { FrolTipModal } from '../Modals/FrolTipModal';
 import { RebuyModal } from '../Modals/RebuyModal';
 import { DanilkaOverlay } from '../Dealer/DanilkaOverlay';
 import { CommunityCards } from './CommunityCards';
+import { SettingsPanel } from '../Controls/SettingsPanel';
 import { CashoutLedgerEntry, GameLogEntry } from '../../types';
 import './Table.css';
 
@@ -165,6 +166,9 @@ export function TableView() {
 
       {/* Danilka overlay */}
       {danilkaEvent && <DanilkaOverlay />}
+
+      {/* Settings */}
+      <SettingsPanel />
 
       {/* Stalling overlay */}
       {stallingAccused && (

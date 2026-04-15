@@ -87,7 +87,7 @@
   border-radius: 12px;
   font-weight: 700;
   color: var(--text-accent);
-  font-size: 1rem;
+  font-size: calc(1rem * var(--scale-font));
   white-space: nowrap;
 }
 
@@ -115,21 +115,21 @@
 }
 
 .card-small {
-  width: 54px;
-  height: 78px;
-  font-size: 1.05rem;
+  width: calc(54px * var(--scale-community-card));
+  height: calc(78px * var(--scale-community-card));
+  font-size: calc(1.05rem * var(--scale-community-card));
 }
 
 .card-medium {
-  width: 72px;
-  height: 102px;
-  font-size: 1.35rem;
+  width: calc(72px * var(--scale-community-card));
+  height: calc(102px * var(--scale-community-card));
+  font-size: calc(1.35rem * var(--scale-community-card));
 }
 
 .card-large {
-  width: 90px;
-  height: 128px;
-  font-size: 1.65rem;
+  width: calc(90px * var(--scale-community-card));
+  height: calc(128px * var(--scale-community-card));
+  font-size: calc(1.65rem * var(--scale-community-card));
 }
 
 .card-face {

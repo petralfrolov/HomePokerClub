@@ -10,15 +10,15 @@
 }
 
 .dealer-img {
-  width: 44px;
-  height: 44px;
+  width: calc(44px * var(--scale-avatar, 1));
+  height: calc(44px * var(--scale-avatar, 1));
   border-radius: 50%;
   border: 2px solid var(--text-accent);
   object-fit: cover;
 }
 
 .dealer-name {
-  font-size: 0.7rem;
+  font-size: calc(0.7rem * var(--scale-font, 1));
   color: var(--text-accent);
   margin-top: 2px;
   font-weight: 600;

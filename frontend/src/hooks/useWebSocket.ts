@@ -15,6 +15,7 @@ export function useWebSocket(tableId: string | null) {
   const setRebuyWindow = useStore((s) => s.setRebuyWindow);
   const setCashoutPending = useStore((s) => s.setCashoutPending);
   const setStallingAccused = useStore((s) => s.setStallingAccused);
+  const setWinnerPlayerIds = useStore((s) => s.setWinnerPlayerIds);
 
   const connect = useCallback(() => {
     if (!tableId || !sessionId) return;
@@ -148,6 +149,7 @@ export function useWebSocket(tableId: string | null) {
         break;
       }
       case 'cards_dealt':
+        setWinnerPlayerIds([]);
         playSound('card_received');
         break;
       case 'blinds_raised':
@@ -158,10 +160,12 @@ export function useWebSocket(tableId: string | null) {
         break;
       case 'round_end': {
         setTurnTimer(null);
+        const winners: string[] = (data.winners || []).map((w: any) => w.player_id);
+        setWinnerPlayerIds(winners);
         const myP = useStore.getState().gameState?.players.find(
           (p) => p.session_id === useStore.getState().sessionId
         );
-        if (myP && data.winners?.some((w: any) => w.player_id === myP.player_id)) {
+        if (myP && winners.includes(myP.player_id)) {
           playSound('win');
         } else if (myP && myP.status !== 'folded') {
           playSound('lose');
@@ -241,7 +245,7 @@ export function useWebSocket(tableId: string | null) {
       default:
         console.log('Unknown WS event:', data.event);
     }
-  }, [setGameState, setFrolTipRequest, setPendingRebuy, setDanilkaEvent, setTurnTimer, setRebuyWindow, setCashoutPending, setStallingAccused]);
+  }, [setGameState, setFrolTipRequest, setPendingRebuy, setDanilkaEvent, setTurnTimer, setRebuyWindow, setCashoutPending, setStallingAccused, setWinnerPlayerIds]);
 
   useEffect(() => {
     const cleanup = connect();

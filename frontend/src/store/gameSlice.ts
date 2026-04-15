@@ -45,6 +45,10 @@ export interface GameSlice {
   // Cashout pending
   cashoutPending: boolean;
   setCashoutPending: (v: boolean) => void;
+
+  // Winner highlight
+  winnerPlayerIds: string[];
+  setWinnerPlayerIds: (ids: string[]) => void;
 }
 
 export const createGameSlice: StateCreator<GameSlice, [], [], GameSlice> = (set) => ({
@@ -73,4 +77,7 @@ export const createGameSlice: StateCreator<GameSlice, [], [], GameSlice> = (set)
 
   cashoutPending: false,
   setCashoutPending: (v) => set({ cashoutPending: v }),
+
+  winnerPlayerIds: [],
+  setWinnerPlayerIds: (ids) => set({ winnerPlayerIds: ids }),
 });

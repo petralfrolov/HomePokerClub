@@ -128,4 +128,13 @@ export const S = {
   gameLogTitle: 'Лог игры',
   cashoutConfirm: 'Вы уверены, что хотите сделать кэшаут и покинуть стол?',
   stallingOverlay: 'СТОЛЛИШЬ!',
+
+  // === Settings ===
+  settingsTitle: '⚙ Настройки',
+  settingAvatarSize: 'Размер аватарок',
+  settingFontSize: 'Размер шрифта',
+  settingCommunityCardSize: 'Карты на столе',
+  settingPlayerCardSize: 'Карты игроков',
+  settingControlsSize: 'Меню действий',
+  settingReset: 'Сбросить',
 };

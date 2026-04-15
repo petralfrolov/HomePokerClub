@@ -1,0 +1,123 @@
+.settings-panel {
+  position: fixed;
+  top: 100px;
+  left: 0;
+  z-index: 200;
+}
+
+.settings-toggle {
+  padding: 0.35rem 0.8rem;
+  border: none;
+  border-radius: 0 0 10px 0;
+  background: rgba(22, 33, 62, 0.9);
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  transition: color 0.2s, background 0.2s;
+}
+
+.settings-toggle:hover {
+  color: var(--text-primary);
+  background: rgba(22, 33, 62, 1);
+}
+
+.settings-panel.open .settings-toggle {
+  border-radius: 0;
+  color: var(--text-accent);
+}
+
+.settings-body {
+  background: rgba(22, 33, 62, 0.95);
+  backdrop-filter: blur(10px);
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0 0 10px 0;
+  padding: 0.6rem 1rem 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 220px;
+}
+
+.setting-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.setting-label {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.setting-slider-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.setting-slider {
+  flex: 1;
+  height: 4px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 2px;
+  outline: none;
+}
+
+.setting-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--text-accent);
+  cursor: pointer;
+  border: 2px solid rgba(0, 0, 0, 0.3);
+}
+
+.setting-value {
+  font-size: 0.7rem;
+  color: var(--text-accent);
+  min-width: 36px;
+  text-align: right;
+  font-weight: 600;
+}
+
+.settings-reset-btn {
+  margin-top: 0.2rem;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.7rem;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+  align-self: center;
+}
+
+.settings-reset-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+}
+
+@media (max-width: 768px) {
+  .settings-body {
+    min-width: 180px;
+    padding: 0.4rem 0.6rem 0.6rem;
+  }
+
+  .setting-label {
+    font-size: 0.6rem;
+  }
+
+  .setting-value {
+    font-size: 0.6rem;
+  }
+}

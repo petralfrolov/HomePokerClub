@@ -43,6 +43,7 @@ export function PlayerSeat({ player, totalPlayers, index }: Props) {
   const gameState = useStore((s) => s.gameState);
   const tableId = useStore((s) => s.tableId);
   const turnTimer = useStore((s) => s.turnTimer);
+  const winnerPlayerIds = useStore((s) => s.winnerPlayerIds);
   const [showMenu, setShowMenu] = useState(false);
   const [timerPercent, setTimerPercent] = useState(100);
   const seatRef = useRef<HTMLDivElement>(null);
@@ -50,6 +51,7 @@ export function PlayerSeat({ player, totalPlayers, index }: Props) {
   const isMe = player.session_id === sessionId;
   const isCurrentTurn = gameState?.current_player_seat === player.seat_index;
   const isDealer = gameState?.dealer_seat === player.seat_index;
+  const isWinner = winnerPlayerIds.includes(player.player_id);
   const position = getSeatPosition(index, totalPlayers);
 
   // Is this player the one with the active timer?
@@ -117,7 +119,7 @@ export function PlayerSeat({ player, totalPlayers, index }: Props) {
   return (
     <div
       ref={seatRef}
-      className={`player-seat ${isMe ? 'is-me' : ''} ${isCurrentTurn ? 'active-turn' : ''} ${player.away ? 'away' : ''} ${player.status}`}
+      className={`player-seat ${isMe ? 'is-me' : ''} ${isCurrentTurn ? 'active-turn' : ''} ${isWinner ? 'winner' : ''} ${player.away ? 'away' : ''} ${player.status}`}
       style={{ left: position.left, top: position.top }}
     >
       {/* Avatar */}
