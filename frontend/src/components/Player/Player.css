@@ -200,7 +200,7 @@
   border: 1px solid var(--text-accent);
 }
 
-/* Player cards — other players only, small & compact */
+/* Player cards — small & compact */
 .player-cards {
   display: flex;
   gap: 1px;
@@ -211,6 +211,21 @@
   pointer-events: none;
   transform: scale(var(--scale-player-card, 1));
   transform-origin: left center;
+}
+
+/* Current player's own cards — larger and repositioned */
+.is-me .player-cards {
+  top: -18px;
+  right: -80px;
+  gap: 2px;
+  filter: drop-shadow(0 4px 12px rgba(0,0,0,0.5));
+}
+
+.is-me .player-cards .card-small {
+  width: 42px;
+  height: 60px;
+  font-size: 0.8rem;
+  border-radius: 4px;
 }
 
 .player-cards .card-small {

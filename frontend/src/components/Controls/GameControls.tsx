@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom';
 import { useStore } from '../../store/useStore';
 import { api } from '../../api';
 import { S } from '../../strings';
-import { CardDisplay } from '../Table/CardDisplay';
 import './Controls.css';
 
 export function GameControls() {
@@ -238,8 +237,6 @@ export function GameControls() {
     }
   }
 
-  const myCards = myPlayer.hole_cards || [];
-
   return (
     <motion.div
       ref={dragRef}
@@ -255,15 +252,6 @@ export function GameControls() {
       }}
       whileDrag={{ cursor: 'grabbing' }}
     >
-      {/* My cards — attached to the left of the menu */}
-      {myCards.length > 0 && (
-        <div className="controls-my-cards">
-          {myCards.map((card, i) => (
-            <CardDisplay key={`ctrl-${card}-${i}`} card={card} size="medium" />
-          ))}
-        </div>
-      )}
-
       <div className="controls-main" style={{ opacity: canAct ? 1 : 0.45, pointerEvents: canAct ? 'auto' : 'none' }}>
         <div className="controls-drag-handle" style={{ pointerEvents: 'auto' }}>⠿</div>
         {/* Always-visible raise slider */}

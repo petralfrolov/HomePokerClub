@@ -174,7 +174,7 @@ export function PlayerSeat({ player, totalPlayers, index }: Props) {
       {/* Cards */}
       <div className={`player-cards ${player.status === 'folded' ? 'folded-cards' : ''}`}>
         <AnimatePresence>
-          {player.hole_cards && player.hole_cards.length > 0 && (!isMe || player.status === 'allin' || ((gameState?.stage === 'showdown' || gameState?.stage === 'waiting') && player.status !== 'folded')) ? (
+          {player.hole_cards && player.hole_cards.length > 0 && (!isMe || player.status !== 'folded') ? (
             // Show actual cards — server sends them when visible (showdown, post-hand, or own allin)
             player.hole_cards.map((card, i) => (
               <motion.div

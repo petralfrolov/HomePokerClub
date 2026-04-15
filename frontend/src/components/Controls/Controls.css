@@ -30,13 +30,7 @@
   cursor: grab;
 }
 
-/* My cards attached to the left of the menu */
-.controls-my-cards {
-  display: flex;
-  gap: 4px;
-  margin-bottom: 6px;
-  filter: drop-shadow(0 4px 12px rgba(0,0,0,0.5));
-}
+/* My cards — now displayed at player seat */
 
 .controls-row {
   display: flex;
