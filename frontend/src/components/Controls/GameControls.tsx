@@ -18,7 +18,9 @@ export function GameControls() {
   const [rebuyAmount, setRebuyAmount] = useState<number>(0);
   const [rebuyTimeLeft, setRebuyTimeLeft] = useState<number>(0);
   const dragRef = useRef<HTMLDivElement>(null);
-  const dragPositionRef = useRef({ x: 0, y: 0 });
+  const DRAG_STORAGE_KEY = 'controls-drag-position';
+  const savedPos = (() => { try { const v = localStorage.getItem(DRAG_STORAGE_KEY); return v ? JSON.parse(v) : { x: 0, y: 0 }; } catch { return { x: 0, y: 0 }; } })();
+  const dragPositionRef = useRef<{ x: number; y: number }>(savedPos);
   const navigate = useNavigate();
   const setTableId = useStore((s) => s.setTableId);
   const setGameState = useStore((s) => s.setGameState);
@@ -249,6 +251,7 @@ export function GameControls() {
       onDragEnd={(_e, info) => {
         dragPositionRef.current.x += info.offset.x;
         dragPositionRef.current.y += info.offset.y;
+        try { localStorage.setItem('controls-drag-position', JSON.stringify(dragPositionRef.current)); } catch {}
       }}
       whileDrag={{ cursor: 'grabbing' }}
     >
