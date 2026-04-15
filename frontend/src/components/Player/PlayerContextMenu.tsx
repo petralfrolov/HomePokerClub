@@ -8,9 +8,10 @@ import './Player.css';
 interface Props {
   player: PlayerInfo;
   onClose: () => void;
+  openLeft?: boolean;
 }
 
-export function PlayerContextMenu({ player, onClose }: Props) {
+export function PlayerContextMenu({ player, onClose, openLeft }: Props) {
   const sessionId = useStore((s) => s.sessionId);
   const tableId = useStore((s) => s.tableId);
   const gameState = useStore((s) => s.gameState);
@@ -66,7 +67,7 @@ export function PlayerContextMenu({ player, onClose }: Props) {
   }
 
   return (
-    <div className="context-menu" onClick={(e) => e.stopPropagation()}>
+    <div className={`context-menu ${openLeft ? 'context-menu-left' : ''}`} onClick={(e) => e.stopPropagation()}>
       <div className="context-menu-header">
         <span className="context-menu-nickname">{player.nickname}</span>
         <span className="context-menu-stack">{S.stackLabel}: {player.stack}</span>

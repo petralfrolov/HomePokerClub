@@ -45,7 +45,7 @@ export function PlayerSeat({ player, totalPlayers, index }: Props) {
   const turnTimer = useStore((s) => s.turnTimer);
   const [showMenu, setShowMenu] = useState(false);
   const [timerPercent, setTimerPercent] = useState(100);
-  const menuTimeout = useRef<ReturnType<typeof setTimeout>>();
+  const seatRef = useRef<HTMLDivElement>(null);
 
   const isMe = player.session_id === sessionId;
   const isCurrentTurn = gameState?.current_player_seat === player.seat_index;
@@ -77,6 +77,18 @@ export function PlayerSeat({ player, totalPlayers, index }: Props) {
     return () => clearInterval(interval);
   }, [isTimerPlayer, turnTimer]);
 
+  // Close context menu on click outside
+  useEffect(() => {
+    if (!showMenu) return;
+    function handleClickOutside(e: MouseEvent) {
+      if (seatRef.current && !seatRef.current.contains(e.target as Node)) {
+        setShowMenu(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showMenu]);
+
   function handleAvatarClick() {
     if (isMe) {
       // Open file picker for avatar upload
@@ -96,9 +108,7 @@ export function PlayerSeat({ player, totalPlayers, index }: Props) {
       };
       input.click();
     } else {
-      setShowMenu(true);
-      clearTimeout(menuTimeout.current);
-      menuTimeout.current = setTimeout(() => setShowMenu(false), 3000);
+      setShowMenu((prev) => !prev);
     }
   }
 
@@ -106,6 +116,7 @@ export function PlayerSeat({ player, totalPlayers, index }: Props) {
 
   return (
     <div
+      ref={seatRef}
       className={`player-seat ${isMe ? 'is-me' : ''} ${isCurrentTurn ? 'active-turn' : ''} ${player.away ? 'away' : ''} ${player.status}`}
       style={{ left: position.left, top: position.top }}
     >
@@ -230,6 +241,7 @@ export function PlayerSeat({ player, totalPlayers, index }: Props) {
         <PlayerContextMenu
           player={player}
           onClose={() => setShowMenu(false)}
+          openLeft={parseFloat(position.left) > 50}
         />
       )}
     </div>

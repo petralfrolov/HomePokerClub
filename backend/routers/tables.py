@@ -468,6 +468,8 @@ async def _auto_start_next_hand(table_id: str, game):
     """Automatically start the next hand."""
     events = game_engine.start_new_hand(game)
     if events.get("type") == "insufficient_players":
+        # Still broadcast so clients see updated away/sitting_out status
+        await _broadcast_game_state(table_id, game)
         return
 
     # Save round to DB
@@ -783,12 +785,26 @@ async def set_away(table_id: str, body: AwayStatus):
     game = _get_game_or_404(table_id)
     player = _get_player_or_403(game, body.session_id)
 
-    player.away = body.away
+    if body.away:
+        # If no active hand or player already sitting out, go away immediately
+        if game.stage in ("waiting",) or player.status in ("sitting_out", "bust"):
+            player.away = True
+            player.pending_away = False
+        else:
+            # Schedule away for next hand
+            player.pending_away = True
+    else:
+        player.away = False
+        player.pending_away = False
 
     await ws_manager.broadcast_all(table_id, "player_away", {
         "player_id": player.player_id,
-        "away": body.away,
+        "away": player.away,
+        "pending_away": player.pending_away,
     })
+
+    # Broadcast updated game state so UI reflects the change
+    await _broadcast_game_state(table_id, game)
 
     return OkResponse()
 

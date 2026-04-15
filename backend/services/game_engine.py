@@ -65,6 +65,7 @@ class PlayerState:
     revealed_cards: list[int] = field(default_factory=list)  # indices 0 or 1
     has_acted_this_round: bool = False
     away: bool = False
+    pending_away: bool = False  # will become away at next hand start
     time_bank: int = DEFAULT_TIME_BANK  # remaining time bank in seconds
     total_buyin: int = 0  # total chips bought in
     total_cashout: int = 0  # total chips cashed out
@@ -205,6 +206,10 @@ class GameEngine:
 
         # Reset player states
         for p in state.players:
+            # Convert pending_away to away at hand start
+            if p.pending_away:
+                p.away = True
+                p.pending_away = False
             if p.stack <= 0:
                 p.status = "bust"
             elif p.away:
@@ -781,6 +786,7 @@ class GameEngine:
                 "bet": p.bet_this_round,
                 "status": p.status,
                 "away": p.away,
+                "pending_away": p.pending_away,
                 "revealed_cards": [
                     Card.int_to_str(p.hole_cards[i])
                     for i in p.revealed_cards

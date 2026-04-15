@@ -194,12 +194,25 @@ export function useWebSocket(tableId: string | null) {
         }
         break;
       }
+      case 'player_away': {
+        const curState = useStore.getState().gameState;
+        if (curState) {
+          setGameState({
+            ...curState,
+            players: curState.players.map((p) =>
+              p.player_id === data.player_id
+                ? { ...p, away: data.away, pending_away: data.pending_away ?? false }
+                : p
+            ),
+          });
+        }
+        break;
+      }
       case 'community_cards':
       case 'player_joined':
       case 'player_left':
       case 'pot_update':
       case 'card_revealed':
-      case 'player_away':
       case 'rebuy_denied':
       case 'player_avatar_updated': {
         // Update avatar in local game state without waiting for full refresh

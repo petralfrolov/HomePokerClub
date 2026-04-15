@@ -162,6 +162,11 @@ async def join_table(table_id: str, body: JoinTable, db: AsyncSession = Depends(
         if p.session_id == body.session_id:
             return JoinResult(player_id=p.id, seat_index=p.seat_index)
 
+    # Check duplicate nickname among active players
+    for p in table.players:
+        if p.nickname.strip().lower() == body.nickname.strip().lower():
+            raise HTTPException(400, "Nickname already taken at this table")
+
     # Validate buyin
     if table.type == "cash":
         if table.min_buyin and body.buyin < table.min_buyin:

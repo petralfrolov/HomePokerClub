@@ -212,6 +212,11 @@
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
 }
 
+.context-menu-left {
+  left: auto;
+  right: 70px;
+}
+
 .context-menu-header {
   display: flex;
   justify-content: space-between;
@@ -346,10 +351,13 @@
   }
 
   .context-menu {
-    left: auto;
-    right: 0;
     min-width: 160px;
     padding: 0.4rem;
     font-size: 0.8rem;
+  }
+
+  .context-menu:not(.context-menu-left) {
+    left: auto;
+    right: 0;
   }
 }

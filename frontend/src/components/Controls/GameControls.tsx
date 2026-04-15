@@ -15,7 +15,7 @@ export function GameControls() {
   const rebuyWindow = useStore((s) => s.rebuyWindow);
   const [raiseAmount, setRaiseAmount] = useState<number>(0);
   const [loading, setLoading] = useState(false);
-  const prevTurnRef = useRef<string | null>(null);
+  const prevStageRef = useRef<string | null>(null);
   const [rebuyAmount, setRebuyAmount] = useState<number>(0);
   const [rebuyTimeLeft, setRebuyTimeLeft] = useState<number>(0);
   const dragRef = useRef<HTMLDivElement>(null);
@@ -75,6 +75,15 @@ export function GameControls() {
       return () => clearTimeout(timeout);
     }
   }, [myPlayer?.status, hasRequestedRebuy, rebuyWindow, navigate, setTableId, setGameState]);
+
+  // Reset raise slider when the street (stage) or round changes
+  const stageKey = `${gameState?.round_number}-${gameState?.stage}`;
+  useEffect(() => {
+    if (prevStageRef.current !== null && prevStageRef.current !== stageKey) {
+      setRaiseAmount(0);
+    }
+    prevStageRef.current = stageKey;
+  }, [stageKey]);
 
   if (!gameState || !tableId) return null;
   if (!myPlayer) return null;
@@ -172,13 +181,6 @@ export function GameControls() {
 
   if (!inActiveHand || myPlayer.status === 'folded' || !hasCards) return null;
 
-  // Reset raise slider when turn/round changes
-  const turnKey = `${gameState.round_number}-${gameState.current_player_seat}`;
-  if (prevTurnRef.current !== turnKey) {
-    prevTurnRef.current = turnKey;
-    if (raiseAmount !== 0) setRaiseAmount(0);
-  }
-
   const canCheck = gameState.current_bet <= (myPlayer.bet || 0);
   const callAmount = Math.min(gameState.current_bet - (myPlayer.bet || 0), myPlayer.stack);
   const sb = gameState.blind_small;
@@ -229,7 +231,8 @@ export function GameControls() {
 
   async function handleAway() {
     try {
-      await api.setAway(tableId!, { session_id: sessionId, away: !myPlayer!.away });
+      const wantAway = !(myPlayer!.away || myPlayer!.pending_away);
+      await api.setAway(tableId!, { session_id: sessionId, away: wantAway });
     } catch (e) {
       console.error(e);
     }
@@ -352,7 +355,7 @@ export function GameControls() {
 
         <div className="controls-secondary" style={{ pointerEvents: 'auto', opacity: 1 }}>
           <button className="control-btn-small" onClick={handleAway}>
-            {myPlayer.away ? S.returnBack : S.goAway}
+            {myPlayer.away ? S.returnBack : myPlayer.pending_away ? S.cancelAway : S.goAway}
           </button>
 
           {myPlayer.stack === 0 && (
