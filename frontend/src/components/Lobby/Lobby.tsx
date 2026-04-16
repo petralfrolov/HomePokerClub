@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useStore } from '../../store/useStore';
+import { useStore, toast } from '../../store/useStore';
 import { api } from '../../api';
 import { TableSummary } from '../../types';
 import { CreateTableModal } from '../Modals/CreateTableModal';
@@ -41,12 +41,19 @@ export function Lobby() {
     return () => clearInterval(interval);
   }, []);
 
+  const hadFirstLoadRef = useRef(false);
+
   async function loadTables() {
     try {
       const data = await api.listTables();
       setTables(data);
-    } catch (e) {
+      hadFirstLoadRef.current = true;
+    } catch (e: any) {
       console.error('Failed to load tables', e);
+      // Only toast on first-load failure; suppress noise during background polling.
+      if (!hadFirstLoadRef.current) {
+        toast(e?.message || 'Не удалось загрузить список столов', 'error');
+      }
     } finally {
       setLoading(false);
     }

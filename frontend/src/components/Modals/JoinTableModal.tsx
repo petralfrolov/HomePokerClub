@@ -67,7 +67,13 @@ export function JoinTableModal({ tableId, isReturning, returningStack, onClose, 
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="modal"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-label={S.joinTableTitle}
+      >
         <h3>{isReturning ? S.returnToTable : S.joinTableTitle}</h3>
         <p className="modal-subtitle">{tableInfo.name}</p>
 

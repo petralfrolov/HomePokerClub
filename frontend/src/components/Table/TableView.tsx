@@ -14,6 +14,7 @@ import { RebuyModal } from '../Modals/RebuyModal';
 import { DanilkaOverlay } from '../Dealer/DanilkaOverlay';
 import { CommunityCards } from './CommunityCards';
 import { SettingsPanel } from '../Controls/SettingsPanel';
+import { HotkeysPanel } from '../Controls/HotkeysPanel';
 import { CashoutLedgerEntry, GameLogEntry } from '../../types';
 import { formatChips } from '../../formatChips';
 import './Table.css';
@@ -143,7 +144,7 @@ export function TableView() {
           <DealerAvatar dealerType={tableConfig?.dealer_type || 'robot'} />
 
           {/* Pot */}
-          <div className="pot-display">
+          <div className="pot-display" aria-live="polite" aria-atomic="true">
             {(gameState?.pot || 0) > 0 && (
               <span className="pot-amount">{S.potDisplay}: {formatChips(gameState?.pot || 0, displayInBB, gameState?.blind_big || 0)}</span>
             )}
@@ -171,6 +172,7 @@ export function TableView() {
 
       {/* Settings */}
       <SettingsPanel />
+      <HotkeysPanel />
 
       {/* Stalling overlay */}
       {stallingAccused && (

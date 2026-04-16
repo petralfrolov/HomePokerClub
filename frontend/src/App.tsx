@@ -1,10 +1,12 @@
 import React from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
-import { useStore } from './store/useStore';
+import { useStore, toast } from './store/useStore';
 import { api } from './api';
 import { Lobby } from './components/Lobby/Lobby';
 import { TableView } from './components/Table/TableView';
 import { SoundControls } from './components/Controls/SoundControls';
+import { ToastStack } from './components/Toast/Toast';
+import { ConnectionBadge } from './components/Controls/ConnectionBadge';
 import { S } from './strings';
 import './components/Table/Table.css';
 
@@ -56,6 +58,27 @@ export default function App() {
   const gameState = useStore((s) => s.gameState);
   const setAfkTable = useStore((s) => s.setAfkTable);
 
+  // Global unhandled-error listeners → user-visible toast instead of silent fail.
+  React.useEffect(() => {
+    const onRejection = (e: PromiseRejectionEvent) => {
+      const reason: any = e.reason;
+      // Ignore aborted fetches (intentional cancellation / route changes)
+      if (reason?.name === 'AbortError') return;
+      console.error('Unhandled rejection:', reason);
+      const msg = reason?.message || reason?.detail || 'Непредвиденная ошибка';
+      toast(String(msg), 'error');
+    };
+    const onError = (e: ErrorEvent) => {
+      console.error('Window error:', e.error || e.message);
+    };
+    window.addEventListener('unhandledrejection', onRejection);
+    window.addEventListener('error', onError);
+    return () => {
+      window.removeEventListener('unhandledrejection', onRejection);
+      window.removeEventListener('error', onError);
+    };
+  }, []);
+
   async function handleLogoClick() {
     if (location.pathname === '/') return;
     if (!tableId || !gameState) {
@@ -83,6 +106,7 @@ export default function App() {
       }
     } catch (e) {
       console.error(e);
+      toast('Не удалось покинуть стол', 'error');
     }
     setAfkTable(tableId, myPlayer.stack);
     navigate('/');
@@ -93,7 +117,10 @@ export default function App() {
     <div className="app">
       <header className="app-header">
         <h1 className="app-title" onClick={handleLogoClick} style={{ cursor: 'pointer' }}>{S.appTitle}</h1>
-        <SoundControls />
+        <div className="app-header-right">
+          <ConnectionBadge />
+          <SoundControls />
+        </div>
       </header>
       <main className="app-main">
         <Routes>
@@ -108,6 +135,7 @@ export default function App() {
           <span className="stalling-text kicked-text">{S.kickedOverlay}</span>
         </div>
       )}
+      <ToastStack />
     </div>
     </ErrorBoundary>
   );

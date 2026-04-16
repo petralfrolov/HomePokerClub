@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useStore } from '../../store/useStore';
+import { useStore, toast } from '../../store/useStore';
 import { api } from '../../api';
 import { PlayerInfo } from '../../types';
 import { CardDisplay } from '../Table/CardDisplay';
@@ -82,16 +82,24 @@ export function PlayerSeat({ player, totalPlayers, index }: Props) {
     return () => clearInterval(interval);
   }, [isTimerPlayer, turnTimer]);
 
-  // Close context menu on click outside
+  // Close context menu on click/tap outside
   useEffect(() => {
     if (!showMenu) return;
-    function handleClickOutside(e: MouseEvent) {
-      if (seatRef.current && !seatRef.current.contains(e.target as Node)) {
+    function handleClickOutside(e: Event) {
+      const target = e.target as Node;
+      if (seatRef.current && !seatRef.current.contains(target)) {
+        // Allow clicks within the context menu itself (it may be rendered centered on mobile).
+        const menu = document.querySelector('.context-menu');
+        if (menu && menu.contains(target)) return;
         setShowMenu(false);
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside, { passive: true });
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
   }, [showMenu]);
 
   function handleAvatarClick() {
@@ -106,8 +114,10 @@ export function PlayerSeat({ player, totalPlayers, index }: Props) {
           try {
             const res = await api.uploadAvatar(sessionId, file);
             useStore.getState().setAvatarUrl(res.avatar_url);
-          } catch (err) {
+            toast('Аватар обновлён', 'success', 2000);
+          } catch (err: any) {
             console.error('Avatar upload failed', err);
+            toast(err?.message || 'Не удалось загрузить аватар', 'error');
           }
         }
       };
@@ -155,10 +165,10 @@ export function PlayerSeat({ player, totalPlayers, index }: Props) {
 
       {/* Timer bar */}
       {isCurrentTurn && (
-        <div className="timer-bar-container">
+        <div className="timer-bar-container" role="progressbar" aria-label="Ход игрока" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(timerPercent)}>
           <div
             className={`timer-bar-fill ${usingTimeBank ? 'time-bank' : ''}`}
-            style={{ width: `${timerPercent}%` }}
+            style={{ transform: `scaleX(${Math.max(0, Math.min(1, timerPercent / 100))})` }}
           />
         </div>
       )}

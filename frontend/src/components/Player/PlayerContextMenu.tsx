@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useStore } from '../../store/useStore';
+import { useStore, toast } from '../../store/useStore';
 import { api } from '../../api';
 import { PlayerInfo } from '../../types';
 import { S } from '../../strings';
@@ -41,7 +41,7 @@ export function PlayerContextMenu({ player, onClose, openLeft }: Props) {
       });
       onClose();
     } catch (e: any) {
-      alert(e.message);
+      toast(e?.message || 'Не удалось отправить чаевые', 'error');
     }
   }
 
@@ -54,7 +54,7 @@ export function PlayerContextMenu({ player, onClose, openLeft }: Props) {
       });
       onClose();
     } catch (e: any) {
-      alert(e.message);
+      toast(e?.message || 'Не удалось отправить упрёк', 'error');
     }
   }
 
@@ -68,7 +68,7 @@ export function PlayerContextMenu({ player, onClose, openLeft }: Props) {
       });
       onClose();
     } catch (e: any) {
-      alert(e.message);
+      toast(e?.message || 'Не удалось кикнуть игрока', 'error');
     }
   }
 

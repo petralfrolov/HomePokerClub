@@ -65,7 +65,15 @@ class TurnTimer:
             # timer task (e.g. player submitted action just as timer expired) does
             # NOT kill the on_timeout coroutine mid-execution, leaving game state
             # mutated but un-broadcast.
-            asyncio.ensure_future(self.on_timeout())
+            async def _safe_timeout() -> None:
+                try:
+                    await self.on_timeout()
+                except Exception:
+                    logger.exception(
+                        "on_timeout callback failed for player %s at table %s",
+                        self.player_id, self.table_id,
+                    )
+            asyncio.ensure_future(_safe_timeout())
 
         except asyncio.CancelledError:
             pass  # Timer cancelled normally because player acted in time

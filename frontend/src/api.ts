@@ -1,17 +1,78 @@
 import type { TableSummary, TableConfig, GameState } from './types';
 
 const API_BASE = '/api';
+const DEFAULT_TIMEOUT_MS = 10_000;
 
-async function request<T>(url: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_BASE}${url}`, {
-    headers: { 'Content-Type': 'application/json' },
-    ...options,
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ detail: res.statusText }));
-    throw new Error(err.detail || 'Request failed');
+export class ApiError extends Error {
+  readonly status: number;
+  readonly detail: string;
+  readonly kind: 'http' | 'network' | 'timeout' | 'aborted';
+  constructor(message: string, opts: { status?: number; detail?: string; kind?: ApiError['kind'] } = {}) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = opts.status ?? 0;
+    this.detail = opts.detail ?? message;
+    this.kind = opts.kind ?? 'http';
   }
-  return res.json();
+}
+
+interface RequestOpts extends RequestInit {
+  timeoutMs?: number;
+  /** Retry on network error / 5xx (default true for GET, false for mutations). */
+  retry?: boolean;
+}
+
+function isSafeMethod(method: string | undefined): boolean {
+  const m = (method || 'GET').toUpperCase();
+  return m === 'GET' || m === 'HEAD';
+}
+
+async function request<T>(url: string, options?: RequestOpts): Promise<T> {
+  const timeoutMs = options?.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+  const shouldRetry = options?.retry ?? isSafeMethod(options?.method);
+  const maxAttempts = shouldRetry ? 2 : 1;
+
+  let lastError: ApiError | null = null;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const res = await fetch(`${API_BASE}${url}`, {
+        headers: { 'Content-Type': 'application/json' },
+        ...options,
+        signal: controller.signal,
+      });
+      clearTimeout(timer);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: res.statusText }));
+        const message = err.detail || err.message || 'Request failed';
+        lastError = new ApiError(message, { status: res.status, detail: message, kind: 'http' });
+        // Only retry on 5xx
+        if (res.status >= 500 && res.status < 600 && attempt < maxAttempts) {
+          await new Promise((r) => setTimeout(r, 600 * attempt));
+          continue;
+        }
+        throw lastError;
+      }
+      // 204 No Content
+      if (res.status === 204) return undefined as T;
+      return (await res.json()) as T;
+    } catch (e: any) {
+      clearTimeout(timer);
+      if (e instanceof ApiError) throw e;
+      const isAbort = e?.name === 'AbortError';
+      const kind: ApiError['kind'] = isAbort ? 'timeout' : 'network';
+      const msg = isAbort ? 'Превышено время ожидания' : 'Нет связи с сервером';
+      lastError = new ApiError(msg, { kind, detail: msg });
+      if (attempt < maxAttempts) {
+        await new Promise((r) => setTimeout(r, 600 * attempt));
+        continue;
+      }
+      throw lastError;
+    }
+  }
+  // Unreachable
+  throw lastError ?? new ApiError('Request failed');
 }
 
 export const api = {
@@ -146,9 +207,28 @@ export const api = {
     const form = new FormData();
     form.append('session_id', session_id);
     form.append('file', file);
-    const res = await fetch(`${API_BASE}/players/avatar`, { method: 'POST', body: form });
-    if (!res.ok) throw new Error('Upload failed');
-    return res.json() as Promise<{ avatar_url: string }>;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 20_000);
+    try {
+      const res = await fetch(`${API_BASE}/players/avatar`, {
+        method: 'POST',
+        body: form,
+        signal: controller.signal,
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: res.statusText }));
+        throw new ApiError(err.detail || 'Upload failed', { status: res.status, detail: err.detail || res.statusText });
+      }
+      return (await res.json()) as { avatar_url: string };
+    } catch (e: any) {
+      if (e instanceof ApiError) throw e;
+      const isAbort = e?.name === 'AbortError';
+      throw new ApiError(isAbort ? 'Превышено время ожидания загрузки' : 'Не удалось загрузить аватар', {
+        kind: isAbort ? 'timeout' : 'network',
+      });
+    } finally {
+      clearTimeout(timer);
+    }
   },
 
   getProfile: (session_id: string) => request<{ session_id: string; nickname: string; avatar_url: string | null }>(`/players/${session_id}`),

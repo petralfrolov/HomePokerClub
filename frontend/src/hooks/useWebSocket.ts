@@ -1,11 +1,16 @@
 import { useEffect, useRef, useCallback } from 'react';
-import { useStore } from '../store/useStore';
+import { useStore, toast } from '../store/useStore';
 import { WsEvent } from '../types';
 import { playSound } from './useSound';
+import type { ConnectionStatus } from '../store/uiSlice';
+
+const PING_INTERVAL_MS = 20_000;
+const PONG_TIMEOUT_MS = 45_000; // consider half-open if no pong for this long
+const RECONNECT_MIN_MS = 1_000;
+const RECONNECT_MAX_MS = 30_000;
 
 export function useWebSocket(tableId: string | null) {
   const wsRef = useRef<WebSocket | null>(null);
-  const intentionalClose = useRef(false);
   const sessionId = useStore((s) => s.sessionId);
   const setGameState = useStore((s) => s.setGameState);
   const setFrolTipRequest = useStore((s) => s.setFrolTipRequest);
@@ -16,49 +21,6 @@ export function useWebSocket(tableId: string | null) {
   const setCashoutPending = useStore((s) => s.setCashoutPending);
   const setStallingAccused = useStore((s) => s.setStallingAccused);
   const setWinnerPlayerIds = useStore((s) => s.setWinnerPlayerIds);
-
-  const connect = useCallback(() => {
-    if (!tableId || !sessionId) return;
-    intentionalClose.current = false;
-
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws/${tableId}?session_id=${sessionId}`;
-    const ws = new WebSocket(wsUrl);
-    wsRef.current = ws;
-
-    ws.onopen = () => {
-      console.log('WS connected');
-    };
-
-    ws.onmessage = (evt) => {
-      try {
-        const data: WsEvent = JSON.parse(evt.data);
-        handleEvent(data);
-      } catch (e) {
-        console.error('WS parse error', e);
-      }
-    };
-
-    ws.onclose = () => {
-      console.log('WS disconnected');
-      // Reconnect after 2 seconds, unless intentionally closed
-      if (!intentionalClose.current) {
-        setTimeout(() => connect(), 2000);
-      }
-    };
-
-    // Keepalive
-    const pingInterval = setInterval(() => {
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: 'ping' }));
-      }
-    }, 30000);
-
-    return () => {
-      clearInterval(pingInterval);
-      ws.close();
-    };
-  }, [tableId, sessionId]);
 
   const handleEvent = useCallback((data: WsEvent) => {
     switch (data.event) {
@@ -118,15 +80,13 @@ export function useWebSocket(tableId: string | null) {
         setCashoutPending(true);
         break;
       case 'table_deleted': {
-        intentionalClose.current = true;
         useStore.getState().setTableId(null);
         useStore.getState().setGameState(null);
-        wsRef.current?.close();
+        try { wsRef.current?.close(1000, 'table_deleted'); } catch { /* ignore */ }
         break;
       }
       case 'you_were_kicked': {
-        intentionalClose.current = true;
-        wsRef.current?.close();
+        try { wsRef.current?.close(1000, 'kicked'); } catch { /* ignore */ }
         useStore.getState().setShowKickedOverlay(true);
         playSound('kick');
         setTimeout(() => {
@@ -140,7 +100,7 @@ export function useWebSocket(tableId: string | null) {
       }
       case 'stalling_accused': {
         const myPlayer = useStore.getState().gameState?.players.find(
-          (p) => p.session_id === sessionId
+          (p) => p.session_id === useStore.getState().sessionId
         );
         if (myPlayer && data.target_id === myPlayer.player_id) {
           setStallingAccused(true);
@@ -174,15 +134,28 @@ export function useWebSocket(tableId: string | null) {
       }
       case 'action_made': {
         const act = data.action;
+        const actorId: string | undefined = (data as any).player_id;
+        const me = useStore.getState().gameState?.players.find(
+          (p) => p.session_id === useStore.getState().sessionId
+        );
+        const isMe = !!me && actorId === me.player_id;
         if (data.auto) {
-          if (act === 'fold') playSound('fold');
+          if (act === 'fold') playSound('fold', { opponent: !isMe });
           break;
         }
-        if (act === 'fold') playSound('fold');
-        else if (act === 'check') playSound('check');
-        else if (act === 'call') playSound('call');
-        else if (act === 'allin') playSound('allin');
-        else if (act === 'raise') playSound('raise');
+        if (act === 'allin') {
+          playSound('allin');
+        } else if (isMe) {
+          if (act === 'fold') playSound('fold');
+          else if (act === 'check') playSound('check');
+          else if (act === 'call') playSound('call');
+          else if (act === 'raise') playSound('raise');
+        } else {
+          if (act === 'fold') playSound('fold', { opponent: true });
+          else if (act === 'check') playSound('check', { opponent: true });
+          else if (act === 'call') playSound('call', { opponent: true });
+          else if (act === 'raise') playSound('raise', { opponent: true });
+        }
         break;
       }
       case 'tip_given':
@@ -222,8 +195,8 @@ export function useWebSocket(tableId: string | null) {
       case 'pot_update':
       case 'card_revealed':
       case 'rebuy_denied':
+        break;
       case 'player_avatar_updated': {
-        // Update avatar in local game state without waiting for full refresh
         const curState = useStore.getState().gameState;
         if (curState) {
           setGameState({
@@ -236,7 +209,6 @@ export function useWebSocket(tableId: string | null) {
         break;
       }
       case 'player_kicked': {
-        // Immediately remove kicked player from local game state for all remaining clients
         const currentState = useStore.getState().gameState;
         if (currentState) {
           setGameState({
@@ -251,14 +223,136 @@ export function useWebSocket(tableId: string | null) {
     }
   }, [setGameState, setFrolTipRequest, setPendingRebuy, setDanilkaEvent, setTurnTimer, setRebuyWindow, setCashoutPending, setStallingAccused, setWinnerPlayerIds]);
 
+  // Keep handleEvent accessible to the effect via a ref so effect deps stay minimal.
+  const handleEventRef = useRef(handleEvent);
+  handleEventRef.current = handleEvent;
+
   useEffect(() => {
-    const cleanup = connect();
-    return () => {
-      intentionalClose.current = true;
-      cleanup?.();
-      wsRef.current?.close();
+    if (!tableId || !sessionId) {
+      useStore.getState().setConnectionStatus('idle');
+      return;
+    }
+
+    // Local-to-effect mutable state — guarantees StrictMode double-mounts stay isolated
+    // and no stale closures can drive a loop.
+    let currentWs: WebSocket | null = null;
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+    let pingInterval: ReturnType<typeof setInterval> | null = null;
+    let reconnectAttempt = 0;
+    let wasOnline = false;
+    let lastPongAt = Date.now();
+    let cancelled = false; // cleanup sets this — suppresses reconnects
+
+    const setStatus = (s: ConnectionStatus) => useStore.getState().setConnectionStatus(s);
+
+    const clearTimers = () => {
+      if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+      if (pingInterval) { clearInterval(pingInterval); pingInterval = null; }
     };
-  }, [connect]);
+
+    const scheduleReconnect = () => {
+      if (cancelled) return;
+      if (reconnectTimer) return;
+      const attempt = reconnectAttempt++;
+      const base = Math.min(RECONNECT_MAX_MS, RECONNECT_MIN_MS * Math.pow(2, attempt));
+      const delay = base * (0.75 + Math.random() * 0.5);
+      setStatus('reconnecting');
+      reconnectTimer = setTimeout(() => {
+        reconnectTimer = null;
+        if (!cancelled) openSocket();
+      }, delay);
+    };
+
+    const openSocket = () => {
+      if (cancelled) return;
+      clearTimers();
+      setStatus('connecting');
+
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${protocol}//${window.location.host}/ws/${tableId}?session_id=${sessionId}`;
+      const ws = new WebSocket(wsUrl);
+      currentWs = ws;
+      wsRef.current = ws;
+      lastPongAt = Date.now();
+
+      ws.onopen = () => {
+        if (cancelled || currentWs !== ws) return;
+        console.log('WS connected');
+        reconnectAttempt = 0;
+        lastPongAt = Date.now();
+        setStatus('online');
+        if (wasOnline) {
+          toast('Соединение восстановлено', 'success', 2500);
+        }
+        wasOnline = true;
+      };
+
+      ws.onmessage = (evt) => {
+        if (cancelled) return;
+        lastPongAt = Date.now(); // any frame counts as liveness signal
+        try {
+          const raw = JSON.parse(evt.data);
+          if (raw && raw.type === 'pong') return;
+          if (raw && raw.type === 'ping') {
+            try { ws.send(JSON.stringify({ type: 'pong' })); } catch { /* ignore */ }
+            return;
+          }
+          handleEventRef.current(raw as WsEvent);
+        } catch (e) {
+          console.error('WS parse error', e);
+        }
+      };
+
+      ws.onerror = () => {
+        // onclose fires after this — reconnect scheduling happens there
+      };
+
+      ws.onclose = () => {
+        console.log('WS disconnected');
+        if (currentWs === ws) currentWs = null;
+        if (wsRef.current === ws) wsRef.current = null;
+        clearTimers();
+        if (cancelled) {
+          setStatus('idle');
+          return;
+        }
+        setStatus('offline');
+        if (wasOnline && reconnectAttempt === 0) {
+          toast('Соединение потеряно. Переподключение…', 'warning', 3000);
+        }
+        scheduleReconnect();
+      };
+
+      pingInterval = setInterval(() => {
+        if (ws.readyState === WebSocket.OPEN) {
+          try { ws.send(JSON.stringify({ type: 'ping' })); } catch { /* ignore */ }
+          if (Date.now() - lastPongAt > PONG_TIMEOUT_MS) {
+            console.warn('WS half-open — forcing close');
+            try { ws.close(); } catch { /* ignore */ }
+          }
+        }
+      }, PING_INTERVAL_MS);
+    };
+
+    openSocket();
+
+    return () => {
+      cancelled = true;
+      clearTimers();
+      const ws = currentWs;
+      currentWs = null;
+      if (wsRef.current === ws) wsRef.current = null;
+      if (ws) {
+        // Detach handlers first so close() cannot re-enter scheduleReconnect.
+        ws.onopen = null;
+        ws.onmessage = null;
+        ws.onerror = null;
+        ws.onclose = null;
+        try { ws.close(1000, 'unmount'); } catch { /* ignore */ }
+      }
+      useStore.getState().setConnectionStatus('idle');
+    };
+  }, [tableId, sessionId]);
 
   return wsRef;
 }

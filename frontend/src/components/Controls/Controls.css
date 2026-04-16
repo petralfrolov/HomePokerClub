@@ -8,6 +8,9 @@
   z-index: 50;
   user-select: none;
   touch-action: none;
+  /* Respect device safe-area (home indicator, notch) */
+  padding-bottom: var(--safe-bottom, 0px);
+  padding-right: var(--safe-right, 0px);
 }
 
 .controls-main {
@@ -51,6 +54,11 @@
   transform: scale(1.05);
 }
 
+.control-btn:active:not(:disabled) {
+  transform: scale(0.97);
+  filter: brightness(0.92);
+}
+
 .control-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
@@ -80,6 +88,16 @@
 .allin-btn {
   background: linear-gradient(135deg, #e74c3c, #c0392b);
   color: white;
+}
+
+.allin-btn.allin-confirm {
+  background: linear-gradient(135deg, #f39c12, #d68910);
+  animation: allin-pulse 0.8s ease-in-out infinite;
+}
+
+@keyframes allin-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(243, 156, 18, 0.7); }
+  50% { box-shadow: 0 0 0 8px rgba(243, 156, 18, 0); }
 }
 
 .raise-input-container {
@@ -335,12 +353,18 @@
     right: 0;
     transform: none;
     gap: 0;
+    padding-left: var(--safe-left, 0px);
+    padding-right: var(--safe-right, 0px);
   }
 
   .controls-main {
     padding: 0.3rem 0.6rem 0.5rem;
     border-radius: 12px 12px 0 0;
     width: 100%;
+  }
+
+  .controls-drag-handle {
+    display: none;
   }
 
   .controls-row {
@@ -350,11 +374,12 @@
   }
 
   .control-btn {
-    padding: 0.5rem 0.7rem;
-    font-size: 0.75rem;
+    padding: 0.6rem 0.5rem;
+    font-size: 0.8rem;
     border-radius: 8px;
     flex: 1;
     min-width: 0;
+    min-height: 40px;
   }
 
   .raise-slider-container {
@@ -366,8 +391,8 @@
   }
 
   .raise-step-btn {
-    width: 24px;
-    height: 24px;
+    width: 30px;
+    height: 30px;
     font-size: 0.85rem;
   }
 
@@ -381,8 +406,9 @@
   }
 
   .raise-preset-btn {
-    font-size: 0.7rem;
-    padding: 0.15rem 0.5rem;
+    font-size: 0.75rem;
+    padding: 0.3rem 0.6rem;
+    min-height: 30px;
   }
 
   .controls-my-cards {
@@ -403,8 +429,9 @@
   }
 
   .control-btn-small {
-    font-size: 0.7rem;
-    padding: 0.25rem 0.6rem;
+    font-size: 0.75rem;
+    padding: 0.35rem 0.7rem;
+    min-height: 32px;
   }
 
   .rebuy-main {
@@ -418,5 +445,24 @@
 
   .sound-slider {
     width: 50px;
+  }
+}
+
+@media (max-width: 480px) {
+  .controls-main {
+    padding: 0.25rem 0.4rem 0.45rem;
+  }
+
+  .control-btn {
+    padding: 0.55rem 0.35rem;
+    font-size: 0.72rem;
+  }
+
+  .btn-pot-pct {
+    display: none; /* too crowded on small phones */
+  }
+
+  .controls-row {
+    gap: 0.25rem;
   }
 }

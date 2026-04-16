@@ -98,9 +98,12 @@
 
 .timer-bar-fill {
   height: 100%;
+  width: 100%;
   border-radius: 3px;
   background: var(--timer-green, #27ae60);
-  transition: width 0.1s linear;
+  transform-origin: left center;
+  transition: transform 0.1s linear;
+  will-change: transform;
 }
 
 .timer-bar-fill.time-bank {
@@ -403,5 +406,30 @@
   .context-menu:not(.context-menu-left) {
     left: auto;
     right: 0;
+  }
+}
+
+/* On phones, show context menu as a centered overlay to avoid clipping. */
+@media (max-width: 480px) {
+  .context-menu,
+  .context-menu-left {
+    position: fixed;
+    top: 50% !important;
+    left: 50% !important;
+    right: auto !important;
+    transform: translate(-50%, -50%);
+    width: min(92vw, 320px);
+    min-width: 0;
+    max-width: 92vw;
+    padding: 0.8rem;
+    font-size: 0.9rem;
+    z-index: 1000;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.7);
+  }
+
+  .context-menu-item {
+    padding: 0.7rem 0.6rem;
+    font-size: 0.95rem;
+    min-height: 44px;
   }
 }

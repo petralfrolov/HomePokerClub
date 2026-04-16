@@ -138,5 +138,33 @@ export const S = {
   settingPlayerCardSize: 'Карты игроков',
   settingControlsSize: 'Меню действий',
   settingDisplayBB: 'Отображать в ББ',
+  settingHotkeys: 'Горячие клавиши',
+  settingVibrate: 'Вибрация (моб.)',
+  settingConfirmAllIn: 'Подтверждение олл-ина',
+  settingOpponentVolume: 'Громкость соперников',
   settingReset: 'Сбросить',
+
+  // === Hotkeys panel ===
+  hotkeysTitle: '⌨ Хоткеи',
+  hotkeysActionsHeader: 'Действия',
+  hotkeysPresetsHeader: 'Пресеты рейза (ББ)',
+  hotkeyFold: 'Фолд',
+  hotkeyCheckCall: 'Чек / Колл',
+  hotkeyRaiseMin: 'Мин. рейз',
+  hotkeyRaiseConfirm: 'Подтвердить рейз',
+  hotkeyAllIn: 'Олл-ин',
+  hotkeyStepUp: 'Увеличить рейз',
+  hotkeyStepDown: 'Уменьшить рейз',
+  hotkeyAway: 'Отойти / вернуться',
+  hotkeyPreset: (i: number) => `Пресет ${i}`,
+  hotkeyPressKey: 'Нажмите клавишу…',
+  hotkeyRebindHint: 'Клик — задать клавишу, Esc — отмена',
+  hotkeyResetAll: 'Сбросить хоткеи',
+  hotkeyResetPresets: 'Сбросить пресеты',
+
+  // === Toasts / errors ===
+  toastConnectionLost: 'Связь со столом потеряна. Переподключаемся…',
+  toastConnectionRestored: 'Связь восстановлена',
+  toastActionFailed: 'Действие не удалось',
+  toastAvatarUpdated: 'Аватар обновлён',
 };

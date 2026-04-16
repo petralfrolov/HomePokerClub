@@ -141,9 +141,11 @@ async def lifespan(app: FastAPI):
     
     logger.info("Poker server started and games recovered from DB")
     cleanup_task = asyncio.create_task(_cleanup_idle_tables())
+    ws_maintenance_task = asyncio.create_task(ws_manager.run_maintenance_loop())
     yield
     # Shutdown
     cleanup_task.cancel()
+    ws_maintenance_task.cancel()
     logger.info("Poker server shutting down")
 
 
@@ -198,20 +200,27 @@ async def websocket_endpoint(websocket: WebSocket, table_id: str, session_id: st
     try:
         while True:
             data = await websocket.receive_text()
+            # Any frame from the client is a liveness signal.
+            ws_manager.touch(table_id, session_id)
             try:
                 msg = json.loads(data)
             except json.JSONDecodeError:
                 continue
 
-            # Handle ping/pong keepalive
-            if msg.get("type") == "ping":
-                await websocket.send_text(json.dumps({"type": "pong"}))
+            msg_type = msg.get("type")
+            # Handle ping/pong keepalive (both directions)
+            if msg_type == "ping":
+                try:
+                    await websocket.send_text(json.dumps({"type": "pong"}))
+                except Exception:
+                    break
+            # "pong" from client in response to server ping: already touched above.
 
     except WebSocketDisconnect:
-        ws_manager.disconnect(table_id, session_id)
+        ws_manager.disconnect(table_id, session_id, websocket)
     except Exception:
         logger.exception("WebSocket error for session %s at table %s", session_id, table_id)
-        ws_manager.disconnect(table_id, session_id)
+        ws_manager.disconnect(table_id, session_id, websocket)
 
 
 # --- Serve frontend (production build) ---

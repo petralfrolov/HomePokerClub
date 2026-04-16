@@ -1,0 +1,56 @@
+.connection-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  white-space: nowrap;
+}
+
+.connection-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+.connection-online {
+  color: #4fd18a;
+  border-color: rgba(39, 174, 96, 0.4);
+}
+
+.connection-connecting,
+.connection-reconnecting {
+  color: #f4b860;
+  border-color: rgba(243, 156, 18, 0.4);
+}
+
+.connection-reconnecting .connection-dot,
+.connection-connecting .connection-dot {
+  animation: connection-pulse 1.1s ease-in-out infinite;
+}
+
+.connection-offline {
+  color: #f4796b;
+  border-color: rgba(231, 76, 60, 0.5);
+}
+
+@keyframes connection-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.4; transform: scale(0.7); }
+}
+
+@media (max-width: 480px) {
+  .connection-label {
+    display: none;
+  }
+  .connection-badge {
+    padding: 0.25rem;
+  }
+}

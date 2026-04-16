@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { useStore } from '../../store/useStore';
+import { useStore, toast } from '../../store/useStore';
 import { api } from '../../api';
 import { S } from '../../strings';
 import { formatChips } from '../../formatChips';
+import { useHotkeys, HotkeyActions } from '../../hooks/useHotkeys';
 import './Controls.css';
 
 export function GameControls() {
@@ -14,6 +15,8 @@ export function GameControls() {
   const tableConfig = useStore((s) => s.tableConfig);
   const rebuyWindow = useStore((s) => s.rebuyWindow);
   const displayInBB = useStore((s) => s.displayInBB);
+  const confirmAllIn = useStore((s) => s.confirmAllIn);
+  const vibrateEnabled = useStore((s) => s.vibrateEnabled);
   const [raiseAmount, setRaiseAmount] = useState<number>(0);
   const [loading, setLoading] = useState(false);
   const prevStageRef = useRef<string | null>(null);
@@ -27,6 +30,25 @@ export function GameControls() {
   const setTableId = useStore((s) => s.setTableId);
   const setGameState = useStore((s) => s.setGameState);
   const [hasRequestedRebuy, setHasRequestedRebuy] = useState(false);
+  const [pendingAllIn, setPendingAllIn] = useState(false);
+
+  // Disable drag + mobile-fixed layout on narrow viewports
+  const [isMobile, setIsMobile] = useState<boolean>(() =>
+    typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches
+  );
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mql = window.matchMedia('(max-width: 768px)');
+    const onChange = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mql.addEventListener('change', onChange);
+    return () => mql.removeEventListener('change', onChange);
+  }, []);
+
+  // Haptic helper (Android only; iOS Safari ignores vibrate())
+  const haptic = (ms = 12) => {
+    if (!vibrateEnabled) return;
+    try { navigator.vibrate?.(ms); } catch { /* ignore */ }
+  };
 
   // Rebuy window countdown (must be before any early returns)
   const myPlayer = gameState?.players.find((p) => p.session_id === sessionId);
@@ -118,8 +140,9 @@ export function GameControls() {
                 try {
                   await api.requestRebuy(tableId!, { session_id: sessionId, amount: defaultAmount });
                   setHasRequestedRebuy(true);
+                  toast('Запрос на додеп отправлен администратору', 'info');
                 } catch (e: any) {
-                  alert(e.message);
+                  toast(e.message || 'Не удалось отправить запрос', 'error');
                 }
               }}
             >
@@ -218,6 +241,14 @@ export function GameControls() {
   const fullPotRaise = Math.max(minRaise, Math.min(maxRaise, roundToSB(gameState.pot)));
 
   async function doAction(action: string, amount?: number) {
+    if (action === 'allin' && confirmAllIn && !pendingAllIn) {
+      setPendingAllIn(true);
+      haptic(20);
+      setTimeout(() => setPendingAllIn(false), 2500);
+      return;
+    }
+    setPendingAllIn(false);
+    haptic(12);
     setLoading(true);
     try {
       await api.gameAction(tableId!, {
@@ -227,6 +258,7 @@ export function GameControls() {
       });
     } catch (e: any) {
       console.error(e.message);
+      toast(e?.message || 'Действие не удалось', 'error');
     } finally {
       setLoading(false);
     }
@@ -245,18 +277,39 @@ export function GameControls() {
     <motion.div
       ref={dragRef}
       className="game-controls"
-      drag
+      drag={!isMobile}
       dragMomentum={false}
       dragElastic={0}
       initial={false}
-      style={{ x: dragPositionRef.current.x, y: dragPositionRef.current.y, cursor: 'grab' }}
+      style={isMobile
+        ? { x: 0, y: 0 }
+        : { x: dragPositionRef.current.x, y: dragPositionRef.current.y, cursor: 'grab' }}
       onDragEnd={(_e, info) => {
+        if (isMobile) return;
         dragPositionRef.current.x += info.offset.x;
         dragPositionRef.current.y += info.offset.y;
         try { localStorage.setItem('controls-drag-position', JSON.stringify(dragPositionRef.current)); } catch {}
       }}
-      whileDrag={{ cursor: 'grabbing' }}
+      whileDrag={isMobile ? undefined : { cursor: 'grabbing' }}
     >
+      <HotkeysBinder
+        enabled={!!canAct && !loading}
+        actions={{
+          onFold: () => doAction('fold'),
+          onCheckOrCall: () => doAction(canCheck ? 'check' : 'call'),
+          onRaiseMin: () => setRaiseAmount(minRaise),
+          onRaiseConfirm: () => doAction('raise', effectiveRaise),
+          onAllIn: () => doAction('allin'),
+          onStepUp: () => setRaiseAmount(raiseSteps[Math.min(raiseSteps.length - 1, closestStepIndex(effectiveRaise) + 1)]),
+          onStepDown: () => setRaiseAmount(raiseSteps[Math.max(0, closestStepIndex(effectiveRaise) - 1)]),
+          onAway: handleAway,
+          onPreset: (i) => {
+            const presets = useStore.getState().raisePresetsBB;
+            const target = Math.max(minRaise, Math.min(maxRaise, roundToSB(presets[i] * bb)));
+            setRaiseAmount(target);
+          },
+        }}
+      />
       <div className="controls-main" style={{ opacity: canAct ? 1 : 0.45, pointerEvents: canAct ? 'auto' : 'none' }}>
         <div className="controls-drag-handle" style={{ pointerEvents: 'auto' }}>⠿</div>
         {/* Always-visible raise slider */}
@@ -301,6 +354,7 @@ export function GameControls() {
             className="control-btn fold-btn"
             onClick={() => doAction('fold')}
             disabled={loading}
+            aria-label={S.fold}
           >
             {S.fold}
           </button>
@@ -310,6 +364,7 @@ export function GameControls() {
               className="control-btn check-btn"
               onClick={() => doAction('check')}
               disabled={loading}
+              aria-label={S.check}
             >
               {S.check}
             </button>
@@ -318,6 +373,7 @@ export function GameControls() {
               className="control-btn call-btn"
               onClick={() => doAction('call')}
               disabled={loading}
+              aria-label={`${S.call} ${callAmount}`}
             >
               {S.call} {formatChips(callAmount, displayInBB, bb)}
               {gameState.pot > 0 && (
@@ -330,6 +386,7 @@ export function GameControls() {
             className="control-btn raise-confirm-btn"
             onClick={() => doAction('raise', effectiveRaise)}
             disabled={loading}
+            aria-label={`${S.raise} ${effectiveRaise}`}
           >
             {S.raise} {formatChips(effectiveRaise, displayInBB, bb)}
             {gameState.pot > 0 && (
@@ -338,11 +395,12 @@ export function GameControls() {
           </button>
 
           <button
-            className="control-btn allin-btn"
+            className={`control-btn allin-btn ${pendingAllIn ? 'allin-confirm' : ''}`}
             onClick={() => doAction('allin')}
             disabled={loading}
+            aria-label={S.allIn}
           >
-            {S.allIn} {formatChips(myPlayer.stack, displayInBB, bb)}
+            {pendingAllIn ? `✓ ${S.allIn}?` : `${S.allIn} ${formatChips(myPlayer.stack, displayInBB, bb)}`}
           </button>
         </div>
 
@@ -357,8 +415,9 @@ export function GameControls() {
               onClick={async () => {
                 try {
                   await api.requestRebuy(tableId!, { session_id: sessionId, amount: bb * 20 });
+                  toast('Запрос на фишки отправлен', 'info');
                 } catch (e: any) {
-                  alert(e.message);
+                  toast(e.message || 'Не удалось отправить запрос', 'error');
                 }
               }}
             >
@@ -369,4 +428,10 @@ export function GameControls() {
       </div>
     </motion.div>
   );
+}
+
+/** Small render-less component that registers hotkeys only while mounted. */
+function HotkeysBinder({ enabled, actions }: { enabled: boolean; actions: HotkeyActions }) {
+  useHotkeys(actions, enabled);
+  return null;
 }

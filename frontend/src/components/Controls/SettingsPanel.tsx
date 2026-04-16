@@ -50,6 +50,14 @@ export function SettingsPanel() {
   const [settings, setSettings] = useState<Settings>(loadSettings);
   const displayInBB = useStore((s) => s.displayInBB);
   const setDisplayInBB = useStore((s) => s.setDisplayInBB);
+  const hotkeysEnabled = useStore((s) => s.hotkeysEnabled);
+  const setHotkeysEnabled = useStore((s) => s.setHotkeysEnabled);
+  const vibrateEnabled = useStore((s) => s.vibrateEnabled);
+  const setVibrateEnabled = useStore((s) => s.setVibrateEnabled);
+  const confirmAllIn = useStore((s) => s.confirmAllIn);
+  const setConfirmAllIn = useStore((s) => s.setConfirmAllIn);
+  const opponentSoundVolume = useStore((s) => s.opponentSoundVolume);
+  const setOpponentSoundVolume = useStore((s) => s.setOpponentSoundVolume);
 
   // Apply on mount and whenever settings change
   useEffect(() => {
@@ -67,17 +75,32 @@ export function SettingsPanel() {
 
   return (
     <div className={`settings-panel ${open ? 'open' : ''}`}>
-      <button className="settings-toggle" onClick={() => setOpen(!open)}>
+      <button
+        className="settings-toggle"
+        onClick={() => setOpen(!open)}
+        aria-expanded={open}
+        aria-controls="settings-body"
+      >
         {S.settingsTitle}
       </button>
       {open && (
-        <div className="settings-body">
+        <div className="settings-body" id="settings-body" role="region" aria-label={S.settingsTitle}>
           <SettingSlider label={S.settingAvatarSize} value={settings.avatarSize} onChange={(v) => update('avatarSize', v)} />
           <SettingSlider label={S.settingFontSize} value={settings.fontSize} onChange={(v) => update('fontSize', v)} />
           <SettingSlider label={S.settingCommunityCardSize} value={settings.communityCardSize} onChange={(v) => update('communityCardSize', v)} />
           <SettingSlider label={S.settingPlayerCardSize} value={settings.playerCardSize} onChange={(v) => update('playerCardSize', v)} />
           <SettingSlider label={S.settingControlsSize} value={settings.controlsSize} onChange={(v) => update('controlsSize', v)} />
+          <SettingSlider
+            label={S.settingOpponentVolume}
+            value={Math.round(opponentSoundVolume * 100)}
+            min={0}
+            max={100}
+            onChange={(v) => setOpponentSoundVolume(v / 100)}
+          />
           <SettingToggle label={S.settingDisplayBB} checked={displayInBB} onChange={setDisplayInBB} />
+          <SettingToggle label={S.settingHotkeys} checked={hotkeysEnabled} onChange={setHotkeysEnabled} />
+          <SettingToggle label={S.settingVibrate} checked={vibrateEnabled} onChange={setVibrateEnabled} />
+          <SettingToggle label={S.settingConfirmAllIn} checked={confirmAllIn} onChange={setConfirmAllIn} />
           <button className="settings-reset-btn" onClick={reset}>{S.settingReset}</button>
         </div>
       )}
@@ -99,18 +122,31 @@ function SettingToggle({ label, checked, onChange }: { label: string; checked: b
   );
 }
 
-function SettingSlider({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
+function SettingSlider({
+  label,
+  value,
+  onChange,
+  min = 50,
+  max = 200,
+}: {
+  label: string;
+  value: number;
+  onChange: (v: number) => void;
+  min?: number;
+  max?: number;
+}) {
   return (
     <div className="setting-row">
       <label className="setting-label">{label}</label>
       <div className="setting-slider-row">
         <input
           type="range"
-          min={50}
-          max={200}
+          min={min}
+          max={max}
           value={value}
           onChange={(e) => onChange(Number(e.target.value))}
           className="setting-slider"
+          aria-label={label}
         />
         <span className="setting-value">{value}%</span>
       </div>

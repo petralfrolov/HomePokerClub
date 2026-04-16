@@ -22,6 +22,21 @@
   --scale-community-card: 1;
   --scale-player-card: 1;
   --scale-controls: 1;
+
+  /* Safe-area insets (for notches, home indicators, rounded corners) */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+
+  /* Design tokens */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --gap-xs: 0.25rem;
+  --gap-sm: 0.5rem;
+  --gap-md: 0.8rem;
+  --gap-lg: 1.2rem;
 }
 
 * {
@@ -30,11 +45,18 @@
   box-sizing: border-box;
 }
 
+html, body {
+  /* Fill the viewport including safe-area insets on notched devices */
+  min-height: 100%;
+  min-height: 100dvh;
+}
+
 body {
   font-family: var(--font-main);
   background-color: var(--bg-primary);
   color: var(--text-primary);
   min-height: 100vh;
+  min-height: 100dvh;
   overflow: hidden;
 }
 
@@ -42,6 +64,7 @@ body {
   display: flex;
   flex-direction: column;
   height: 100vh;
+  height: 100dvh;
 }
 
 .app-header {
@@ -49,9 +72,18 @@ body {
   justify-content: space-between;
   align-items: center;
   padding: 0.5rem 1.5rem;
+  padding-top: max(0.5rem, var(--safe-top));
+  padding-left: max(1.5rem, var(--safe-left));
+  padding-right: max(1.5rem, var(--safe-right));
   background: var(--bg-secondary);
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   z-index: 100;
+}
+
+.app-header-right {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
 }
 
 .app-title {
@@ -74,9 +106,26 @@ input, select {
   font-family: var(--font-main);
 }
 
-/* Scrollbar */
+/* Keyboard focus affordance (opt-in via :focus-visible so mouse clicks don't flash) */
+:focus-visible {
+  outline: 2px solid var(--text-accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* Larger tap targets & no 300ms delay on touch */
+button, .control-btn, .control-btn-small, a {
+  touch-action: manipulation;
+}
+
+/* Scrollbar (Webkit + Firefox fallback) */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--bg-secondary) transparent;
+}
 ::-webkit-scrollbar {
   width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
   background: var(--bg-primary);
@@ -95,6 +144,9 @@ input, select {
 
   .app-header {
     padding: 0.4rem 0.8rem;
+    padding-top: max(0.4rem, var(--safe-top));
+    padding-left: max(0.8rem, var(--safe-left));
+    padding-right: max(0.8rem, var(--safe-right));
   }
 
   .app-title {

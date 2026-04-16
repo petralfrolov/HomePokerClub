@@ -47,7 +47,13 @@ export function RebuyModal() {
 
   return (
     <div className="modal-overlay" onClick={() => setPendingRebuy(null)}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="modal"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-label={S.rebuyRequestTitle}
+      >
         <h3>{S.rebuyRequestTitle}</h3>
         <p>
           {playerName} {S.wantsRebuy} <strong>{pendingRebuy.amount}</strong>.

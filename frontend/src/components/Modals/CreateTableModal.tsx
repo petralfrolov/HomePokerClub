@@ -107,7 +107,13 @@ export function CreateTableModal({ onClose, onCreated }: Props) {
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="modal"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-label={S.createTableTitle}
+      >
         <h3>{S.createTableTitle}</h3>
 
         <div className="form-group">

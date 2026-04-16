@@ -408,7 +408,12 @@ async def _check_hand_end(table_id: str, game, result: dict):
         # Schedule post-hand continuation (rebuy window + auto-start) as background task
         # so the HTTP response is not blocked
         import asyncio
-        asyncio.ensure_future(_post_hand_continuation(table_id, game, end_data))
+        async def _safe_post_hand():
+            try:
+                await _post_hand_continuation(table_id, game, end_data)
+            except Exception:
+                logger.exception("Post-hand continuation failed for table %s", table_id)
+        asyncio.ensure_future(_safe_post_hand())
 
         return True
 
@@ -421,7 +426,12 @@ async def _check_hand_end(table_id: str, game, result: dict):
 
         # Auto-start next hand after danilka cancel (background)
         import asyncio
-        asyncio.ensure_future(_danilka_restart(table_id, game))
+        async def _safe_danilka():
+            try:
+                await _danilka_restart(table_id, game)
+            except Exception:
+                logger.exception("Danilka restart failed for table %s", table_id)
+        asyncio.ensure_future(_safe_danilka())
         return True
 
     # If there's a new current player, start their timer
