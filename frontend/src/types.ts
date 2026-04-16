@@ -70,6 +70,7 @@ export interface TableConfig {
   max_buyin: number | null;
   starting_stack: number | null;
   tournament_blind_interval: number | null;
+  tournament_blind_multiplier: number | null;
   status: string;
 }
 

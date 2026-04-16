@@ -45,6 +45,7 @@ STALLING_TIME_BANK_PENALTY = 0      # time bank reduced to this on accusation
 # ---- Lobby ----
 INVITE_CODE_BYTES = 6                # bytes for token_urlsafe invite code
 DEFAULT_TOURNAMENT_BLIND_INTERVAL = 10
+DEFAULT_TOURNAMENT_BLIND_MULTIPLIER = 1.5
 
 # ---- Background tasks ----
 IDLE_TABLE_CLEANUP_INTERVAL = 300    # seconds between idle-table checks

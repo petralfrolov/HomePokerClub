@@ -115,6 +115,7 @@ async def lifespan(app: FastAPI):
                 time_bank_max=t.time_bank_max,
                 dealer_type=t.dealer_type,
                 tournament_blind_interval=t.tournament_blind_interval,
+                tournament_blind_multiplier=t.tournament_blind_multiplier or 1.5,
             )
             # Restore table-level game state from DB
             game.round_number = t.round_number

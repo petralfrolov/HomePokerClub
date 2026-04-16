@@ -50,6 +50,7 @@ export const S = {
   maxBuyinLabel: 'Макс. байин',
   startingStackLabel: 'Стартовый стек',
   blindIntervalLabel: 'Повышение блайндов (раздач)',
+  blindMultiplierLabel: 'Множитель блайндов',
   enterTableName: 'Введите название стола',
   creating: 'Создание...',
   create: 'Создать',

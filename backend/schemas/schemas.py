@@ -16,6 +16,7 @@ class TableCreate(BaseModel):
     max_buyin: int | None = None
     starting_stack: int | None = None
     tournament_blind_interval: int | None = Field(None, ge=1)
+    tournament_blind_multiplier: float | None = Field(None, gt=1.0, le=3.0)
 
 
 class TableCreated(BaseModel):
@@ -60,6 +61,7 @@ class TableDetail(BaseModel):
     max_buyin: int | None
     starting_stack: int | None
     tournament_blind_interval: int | None
+    tournament_blind_multiplier: float | None
     status: str
     players: list[PlayerInfo]
 

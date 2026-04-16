@@ -20,6 +20,7 @@ interface LobbySettings {
   maxBuyin: number;
   startingStack: number;
   blindInterval: number;
+  blindMultiplier: number;
 }
 
 function loadSavedSettings(): LobbySettings {
@@ -31,6 +32,7 @@ function loadSavedSettings(): LobbySettings {
     type: 'cash', blindSmall: 10, blindBig: 20,
     timePerMove: 30, timeBank: 90, dealerType: 'robot',
     minBuyin: 200, maxBuyin: 2000, startingStack: 1500, blindInterval: 10,
+    blindMultiplier: 1.5,
   };
 }
 
@@ -52,6 +54,7 @@ export function CreateTableModal({ onClose, onCreated }: Props) {
   const [maxBuyin, setMaxBuyin] = useState(saved.maxBuyin);
   const [startingStack, setStartingStack] = useState(saved.startingStack);
   const [blindInterval, setBlindInterval] = useState(saved.blindInterval);
+  const [blindMultiplier, setBlindMultiplier] = useState(saved.blindMultiplier);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -83,12 +86,14 @@ export function CreateTableModal({ onClose, onCreated }: Props) {
       } else {
         data.starting_stack = startingStack;
         data.tournament_blind_interval = blindInterval;
+        data.tournament_blind_multiplier = blindMultiplier;
       }
 
       saveSettings({
         type, blindSmall, blindBig,
         timePerMove: clampedTimePerMove, timeBank: clampedTimeBank,
         dealerType, minBuyin, maxBuyin, startingStack, blindInterval,
+        blindMultiplier,
       });
 
       const res = await api.createTable(data);
@@ -197,26 +202,41 @@ export function CreateTableModal({ onClose, onCreated }: Props) {
             </div>
           </div>
         ) : (
-          <div className="form-row">
-            <div className="form-group">
-              <label>{S.startingStackLabel}</label>
-              <input
-                type="number"
-                min={1}
-                value={startingStack}
-                onChange={(e) => setStartingStack(parseInt(e.target.value) || 1)}
-              />
+          <>
+            <div className="form-row">
+              <div className="form-group">
+                <label>{S.startingStackLabel}</label>
+                <input
+                  type="number"
+                  min={1}
+                  value={startingStack}
+                  onChange={(e) => setStartingStack(parseInt(e.target.value) || 1)}
+                />
+              </div>
+              <div className="form-group">
+                <label>{S.blindIntervalLabel}</label>
+                <input
+                  type="number"
+                  min={1}
+                  value={blindInterval}
+                  onChange={(e) => setBlindInterval(parseInt(e.target.value) || 10)}
+                />
+              </div>
             </div>
             <div className="form-group">
-              <label>{S.blindIntervalLabel}</label>
-              <input
-                type="number"
-                min={1}
-                value={blindInterval}
-                onChange={(e) => setBlindInterval(parseInt(e.target.value) || 10)}
-              />
+              <label>{S.blindMultiplierLabel}</label>
+              <select
+                value={blindMultiplier}
+                onChange={(e) => setBlindMultiplier(parseFloat(e.target.value))}
+              >
+                <option value={1.25}>×1.25</option>
+                <option value={1.5}>×1.5</option>
+                <option value={2}>×2</option>
+                <option value={2.5}>×2.5</option>
+                <option value={3}>×3</option>
+              </select>
             </div>
-          </div>
+          </>
         )}
 
         {error && <div className="form-error">{error}</div>}

@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, DateTime, Integer, Text, ForeignKey
+from sqlalchemy import Boolean, DateTime, Float, Integer, Text, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from backend.database import Base
@@ -41,6 +41,7 @@ class Table(Base):
     max_buyin: Mapped[int | None] = mapped_column(Integer, nullable=True)
     starting_stack: Mapped[int | None] = mapped_column(Integer, nullable=True)
     tournament_blind_interval: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    tournament_blind_multiplier: Mapped[float | None] = mapped_column(Float, nullable=True)
     status: Mapped[str] = mapped_column(Text, default="waiting")
     round_number: Mapped[int] = mapped_column(Integer, default=0)
     dealer_seat_index: Mapped[int] = mapped_column(Integer, default=0)

@@ -490,7 +490,14 @@ async def _auto_start_next_hand(table_id: str, game):
         await ws_manager.send_personal(table_id, session_id, "cards_dealt", {"your_cards": cards})
 
     await _broadcast_game_state(table_id, game)
-    await _start_turn_timer(table_id, game)
+
+    # All players all-in from blinds — skip to showdown
+    if events.get("all_in_preflop"):
+        advance = game_engine._try_advance(game)
+        if advance:
+            await _check_hand_end(table_id, game, {"advance": advance})
+    else:
+        await _start_turn_timer(table_id, game)
 
 
 # ---- Start game ----
@@ -532,7 +539,14 @@ async def start_game(table_id: str, body: StartGame, db: AsyncSession = Depends(
         await ws_manager.send_personal(table_id, session_id, "cards_dealt", {"your_cards": cards})
 
     await _broadcast_game_state(table_id, game)
-    await _start_turn_timer(table_id, game)
+
+    # All players all-in from blinds — skip to showdown
+    if events.get("all_in_preflop"):
+        advance = game_engine._try_advance(game)
+        if advance:
+            await _check_hand_end(table_id, game, {"advance": advance})
+    else:
+        await _start_turn_timer(table_id, game)
 
     return OkResponse()
 

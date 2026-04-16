@@ -82,6 +82,7 @@ class GameState:
     time_bank_max: int
     dealer_type: str
     tournament_blind_interval: int | None = None
+    tournament_blind_multiplier: float = 1.5
 
     players: list[PlayerState] = field(default_factory=list)
     dealer_seat_index: int = 0
@@ -279,8 +280,14 @@ class GameEngine:
 
         state.current_bet = state.blind_big
 
-        # First to act is after BB preflop
-        state.current_player_index = self._next_betting_seat(state, bb_index)
+        # Check if all players are already all-in from blinds
+        betting = state.betting_players()
+        if len(betting) == 0:
+            state.current_player_index = None
+            events["all_in_preflop"] = True
+        else:
+            # First to act is after BB preflop
+            state.current_player_index = self._next_betting_seat(state, bb_index)
 
         # Cards info (personal)
         events["cards"] = {
@@ -696,12 +703,26 @@ class GameEngine:
 
     # ---- Tournament blinds ----
 
+    @staticmethod
+    def _round_blind(value: int) -> int:
+        """Round blind to a 'nice' number."""
+        if value <= 10:
+            return value
+        if value <= 50:
+            return round(value / 5) * 5
+        if value <= 200:
+            return round(value / 10) * 10
+        if value <= 1000:
+            return round(value / 25) * 25
+        return round(value / 50) * 50
+
     def check_blind_increase(self, state: GameState) -> dict[str, Any] | None:
         if state.game_type != "tournament" or not state.tournament_blind_interval:
             return None
         if state.round_number % state.tournament_blind_interval == 0:
-            state.blind_small *= 2
-            state.blind_big *= 2
+            m = state.tournament_blind_multiplier
+            state.blind_small = self._round_blind(int(state.blind_small * m))
+            state.blind_big = state.blind_small * 2
             return {
                 "type": "blinds_raised",
                 "blind_small": state.blind_small,

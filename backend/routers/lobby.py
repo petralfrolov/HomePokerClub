@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from backend.config import MAX_PLAYERS_PER_TABLE, INVITE_CODE_BYTES, DEFAULT_TOURNAMENT_BLIND_INTERVAL
+from backend.config import MAX_PLAYERS_PER_TABLE, INVITE_CODE_BYTES, DEFAULT_TOURNAMENT_BLIND_INTERVAL, DEFAULT_TOURNAMENT_BLIND_MULTIPLIER
 from backend.database import get_db
 from backend.models.tables import Table, Player, Session, GameRound, RoundAction
 from backend.schemas.schemas import (
@@ -87,6 +87,7 @@ async def create_table(body: TableCreate, db: AsyncSession = Depends(get_db)):
         max_buyin=body.max_buyin,
         starting_stack=body.starting_stack,
         tournament_blind_interval=body.tournament_blind_interval or DEFAULT_TOURNAMENT_BLIND_INTERVAL,
+        tournament_blind_multiplier=body.tournament_blind_multiplier or DEFAULT_TOURNAMENT_BLIND_MULTIPLIER,
     )
     db.add(table)
     await db.commit()
@@ -101,6 +102,7 @@ async def create_table(body: TableCreate, db: AsyncSession = Depends(get_db)):
         time_bank_max=body.time_bank,
         dealer_type=body.dealer_type,
         tournament_blind_interval=body.tournament_blind_interval or DEFAULT_TOURNAMENT_BLIND_INTERVAL,
+        tournament_blind_multiplier=body.tournament_blind_multiplier or DEFAULT_TOURNAMENT_BLIND_MULTIPLIER,
     )
 
     return TableCreated(table_id=table_id, invite_code=invite_code)
@@ -128,6 +130,7 @@ async def get_table(table_id: str, db: AsyncSession = Depends(get_db)):
         max_buyin=table.max_buyin,
         starting_stack=table.starting_stack,
         tournament_blind_interval=table.tournament_blind_interval,
+        tournament_blind_multiplier=table.tournament_blind_multiplier,
         status=table.status,
         players=[
             PlayerInfo(
