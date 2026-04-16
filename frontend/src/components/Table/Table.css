@@ -463,16 +463,22 @@
   .cashout-ledger {
     bottom: auto;
     left: auto;
-    top: 88px;
+    /* app-header ~36px + table-top-bar two rows ~72px + gap */
+    top: 114px;
     right: 8px;
     padding: 0.5rem 0.7rem;
     min-width: 0;
     max-width: calc(100vw - 16px);
     font-size: 0.75rem;
+    /* Limit expanded height so it doesn't cover the table */
+    max-height: calc(100vh - 200px);
+    overflow-y: auto;
   }
 
   .cashout-ledger.collapsed {
     padding: 0.35rem 0.6rem;
+    max-height: none;
+    overflow-y: visible;
   }
 
   .stalling-text {

@@ -138,6 +138,7 @@ export function TableView() {
             <button className="btn-cashout" onClick={handleCashout}>{S.cashoutBtn}</button>
           )}
           <SettingsPanel />
+          <HotkeysPanel />
         </div>
       </div>
 
@@ -173,8 +174,7 @@ export function TableView() {
       {/* Danilka overlay */}
       {danilkaEvent && <DanilkaOverlay />}
 
-      {/* Hotkeys help (Settings is rendered in top bar) */}
-      <HotkeysPanel />
+      {/* HotkeysPanel is now in the top bar (desktop only) */}
 
       {/* Stalling overlay */}
       {stallingAccused && (
