@@ -28,6 +28,10 @@ export interface UiSlice {
   soundMuted: boolean;
   setSoundVolume: (v: number) => void;
   setSoundMuted: (v: boolean) => void;
+
+  // Display mode
+  displayInBB: boolean;
+  setDisplayInBB: (v: boolean) => void;
 }
 
 export const createUiSlice: StateCreator<UiSlice, [], [], UiSlice> = (set) => ({
@@ -50,5 +54,11 @@ export const createUiSlice: StateCreator<UiSlice, [], [], UiSlice> = (set) => ({
   setSoundMuted: (v) => {
     localStorage.setItem('sound_muted', String(v));
     set({ soundMuted: v });
+  },
+
+  displayInBB: localStorage.getItem('display_in_bb') === 'true',
+  setDisplayInBB: (v) => {
+    localStorage.setItem('display_in_bb', String(v));
+    set({ displayInBB: v });
   },
 });

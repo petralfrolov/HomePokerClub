@@ -107,6 +107,49 @@
   color: var(--text-primary);
 }
 
+.setting-toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 36px;
+  height: 20px;
+}
+
+.setting-toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.setting-toggle-track {
+  position: absolute;
+  cursor: pointer;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: rgba(255, 255, 255, 0.15);
+  border-radius: 20px;
+  transition: background-color 0.3s;
+}
+
+.setting-toggle-track::before {
+  content: "";
+  position: absolute;
+  height: 14px;
+  width: 14px;
+  left: 3px;
+  bottom: 3px;
+  background-color: #aaa;
+  border-radius: 50%;
+  transition: transform 0.3s, background-color 0.3s;
+}
+
+.setting-toggle-switch input:checked + .setting-toggle-track {
+  background-color: var(--text-accent, #4CAF50);
+}
+
+.setting-toggle-switch input:checked + .setting-toggle-track::before {
+  transform: translateX(16px);
+  background-color: #fff;
+}
+
 @media (max-width: 768px) {
   .settings-body {
     min-width: 180px;

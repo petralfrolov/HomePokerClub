@@ -13,21 +13,29 @@ export function FrolTipModal() {
   const tableId = useStore((s) => s.tableId);
   const gameState = useStore((s) => s.gameState);
 
-  const [tipPercent, setTipPercent] = useState(50);
+  const [tipAmount, setTipAmount] = useState(0);
   const [timeLeft, setTimeLeft] = useState(15);
   const [declinePos, setDeclinePos] = useState({ x: 0, y: 0 });
   const [declinePosIdx, setDeclinePosIdx] = useState(0);
 
+  const sb = gameState?.blind_small || 1;
+
+  // Compute SB-rounded tip boundaries
+  const minTipAmount = frolReq ? Math.max(sb, Math.ceil((frolReq.pot * frolReq.min_tip_percent / 100) / sb) * sb) : sb;
+  const maxTipAmount = frolReq ? Math.max(sb, Math.floor((frolReq.pot * frolReq.max_tip_percent / 100) / sb) * sb) : sb;
+
   useEffect(() => {
     if (!frolReq) return;
+    const currentSb = gameState?.blind_small || 1;
+    const minAmount = Math.max(currentSb, Math.ceil((frolReq.pot * frolReq.min_tip_percent / 100) / currentSb) * currentSb);
+    setTipAmount(minAmount);
     setTimeLeft(frolReq.tip_timeout);
-    setTipPercent(frolReq.min_tip_percent);
 
     const timer = setInterval(() => {
       setTimeLeft((t) => {
         if (t <= 1) {
-          // Auto-tip at min percent
-          handleTip(frolReq.min_tip_percent);
+          // Auto-tip at min amount
+          handleTip(minAmount);
           clearInterval(timer);
           return 0;
         }
@@ -55,17 +63,16 @@ export function FrolTipModal() {
     return () => clearInterval(interval);
   }, [frolReq]);
 
-  const handleTip = useCallback(async (percent?: number) => {
+  const handleTip = useCallback(async (overrideAmount?: number) => {
     if (!frolReq || !tableId) return;
-    const p = percent ?? tipPercent;
-    const amount = Math.floor((frolReq.pot * p) / 100);
+    const amount = overrideAmount ?? tipAmount;
     try {
       await api.frolTip(tableId, { session_id: sessionId, amount });
     } catch (e) {
       console.error(e);
     }
     setFrolTipRequest(null);
-  }, [frolReq, tableId, sessionId, tipPercent, setFrolTipRequest]);
+  }, [frolReq, tableId, sessionId, tipAmount, setFrolTipRequest]);
 
   const handleDecline = useCallback(async () => {
     if (!frolReq || !tableId) return;
@@ -83,7 +90,7 @@ export function FrolTipModal() {
 
   if (!frolReq) return null;
 
-  const tipAmount = Math.floor((frolReq.pot * tipPercent) / 100);
+  const tipPercent = frolReq.pot > 0 ? Math.round((tipAmount / frolReq.pot) * 100) : 0;
 
   return (
     <div className="modal-overlay frol-modal-overlay">
@@ -103,14 +110,14 @@ export function FrolTipModal() {
         <div className="frol-slider">
           <input
             type="range"
-            min={frolReq.decline_button_type === 'trick' ? 0 : frolReq.min_tip_percent}
-            max={frolReq.max_tip_percent}
-            step={frolReq.tip_step}
-            value={tipPercent}
-            onChange={(e) => setTipPercent(parseInt(e.target.value))}
+            min={frolReq.decline_button_type === 'trick' ? 0 : minTipAmount}
+            max={maxTipAmount}
+            step={sb}
+            value={tipAmount}
+            onChange={(e) => setTipAmount(parseInt(e.target.value))}
           />
           <div className="frol-tip-amount">
-            {tipPercent}% = {tipAmount} {S.chips}
+            {tipAmount} {S.chips} ({tipPercent}%)
           </div>
         </div>
 

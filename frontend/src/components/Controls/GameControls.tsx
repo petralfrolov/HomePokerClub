@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useStore } from '../../store/useStore';
 import { api } from '../../api';
 import { S } from '../../strings';
+import { formatChips } from '../../formatChips';
 import './Controls.css';
 
 export function GameControls() {
@@ -12,6 +13,7 @@ export function GameControls() {
   const tableId = useStore((s) => s.tableId);
   const tableConfig = useStore((s) => s.tableConfig);
   const rebuyWindow = useStore((s) => s.rebuyWindow);
+  const displayInBB = useStore((s) => s.displayInBB);
   const [raiseAmount, setRaiseAmount] = useState<number>(0);
   const [loading, setLoading] = useState(false);
   const prevStageRef = useRef<string | null>(null);
@@ -290,7 +292,7 @@ export function GameControls() {
               className="raise-step-btn"
               onClick={() => setRaiseAmount(raiseSteps[Math.min(raiseSteps.length - 1, closestStepIndex(effectiveRaise) + 1)])}
             >+</button>
-            <span className="raise-value">{effectiveRaise}</span>
+            <span className="raise-value">{formatChips(effectiveRaise, displayInBB, bb)}</span>
           </div>
         </div>
 
@@ -317,7 +319,7 @@ export function GameControls() {
               onClick={() => doAction('call')}
               disabled={loading}
             >
-              {S.call} {callAmount}
+              {S.call} {formatChips(callAmount, displayInBB, bb)}
               {gameState.pot > 0 && (
                 <span className="btn-pot-pct">{Math.round((callAmount / gameState.pot) * 100)}%</span>
               )}
@@ -329,7 +331,7 @@ export function GameControls() {
             onClick={() => doAction('raise', effectiveRaise)}
             disabled={loading}
           >
-            {S.raise} {effectiveRaise}
+            {S.raise} {formatChips(effectiveRaise, displayInBB, bb)}
             {gameState.pot > 0 && (
               <span className="btn-pot-pct">{Math.round((effectiveRaise / gameState.pot) * 100)}%</span>
             )}
@@ -340,7 +342,7 @@ export function GameControls() {
             onClick={() => doAction('allin')}
             disabled={loading}
           >
-            {S.allIn} {myPlayer.stack}
+            {S.allIn} {formatChips(myPlayer.stack, displayInBB, bb)}
           </button>
         </div>
 

@@ -5,6 +5,7 @@ import { api } from '../../api';
 import { PlayerInfo } from '../../types';
 import { CardDisplay } from '../Table/CardDisplay';
 import { PlayerContextMenu } from './PlayerContextMenu';
+import { formatChips } from '../../formatChips';
 import './Player.css';
 
 interface Props {
@@ -53,6 +54,8 @@ export function PlayerSeat({ player, totalPlayers, index }: Props) {
   const isDealer = gameState?.dealer_seat === player.seat_index;
   const isWinner = winnerPlayerIds.includes(player.player_id);
   const position = getSeatPosition(index, totalPlayers);
+  const displayInBB = useStore((s) => s.displayInBB);
+  const bb = gameState?.blind_big || 0;
 
   // Is this player the one with the active timer?
   const isTimerPlayer = turnTimer && turnTimer.playerId === player.player_id;
@@ -144,7 +147,7 @@ export function PlayerSeat({ player, totalPlayers, index }: Props) {
       {/* Info */}
       <div className="player-info">
         <span className="player-nickname">{player.nickname}</span>
-        <span className="player-stack">{player.stack}</span>
+        <span className="player-stack">{formatChips(player.stack, displayInBB, bb)}</span>
         {player.hand_name && (
           <span className="player-hand-name">{player.hand_name}</span>
         )}
@@ -167,7 +170,7 @@ export function PlayerSeat({ player, totalPlayers, index }: Props) {
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
         >
-          {player.bet}
+          {formatChips(player.bet, displayInBB, bb)}
         </motion.div>
       )}
 

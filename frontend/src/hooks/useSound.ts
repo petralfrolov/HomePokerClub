@@ -26,13 +26,15 @@ const SOUND_VARIANTS: Record<string, number> = {
   allin: 2,
   raise: 2,
   win: 1,
-  lose: 2,
+  lose: 1,
   stalling: 2,
   blinds_up: 1,
   rebuy: 1,
-  kick: 1,
+  kick: 2,
   tips: 1,
   frol_tips: 1,
+  player_joined: 1,
+  player_left: 1,
 };
 
 const sounds: Record<string, Howl> = {};

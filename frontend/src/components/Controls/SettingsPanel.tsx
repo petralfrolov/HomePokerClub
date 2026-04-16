@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useStore } from '../../store/useStore';
 import { S } from '../../strings';
 import './SettingsPanel.css';
 
@@ -47,6 +48,8 @@ function applySettings(s: Settings) {
 export function SettingsPanel() {
   const [open, setOpen] = useState(false);
   const [settings, setSettings] = useState<Settings>(loadSettings);
+  const displayInBB = useStore((s) => s.displayInBB);
+  const setDisplayInBB = useStore((s) => s.setDisplayInBB);
 
   // Apply on mount and whenever settings change
   useEffect(() => {
@@ -74,9 +77,24 @@ export function SettingsPanel() {
           <SettingSlider label={S.settingCommunityCardSize} value={settings.communityCardSize} onChange={(v) => update('communityCardSize', v)} />
           <SettingSlider label={S.settingPlayerCardSize} value={settings.playerCardSize} onChange={(v) => update('playerCardSize', v)} />
           <SettingSlider label={S.settingControlsSize} value={settings.controlsSize} onChange={(v) => update('controlsSize', v)} />
+          <SettingToggle label={S.settingDisplayBB} checked={displayInBB} onChange={setDisplayInBB} />
           <button className="settings-reset-btn" onClick={reset}>{S.settingReset}</button>
         </div>
       )}
+    </div>
+  );
+}
+
+function SettingToggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <div className="setting-row">
+      <label className="setting-label">{label}</label>
+      <div className="setting-slider-row">
+        <label className="setting-toggle-switch">
+          <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
+          <span className="setting-toggle-track" />
+        </label>
+      </div>
     </div>
   );
 }

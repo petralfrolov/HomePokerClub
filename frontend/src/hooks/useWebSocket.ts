@@ -212,9 +212,13 @@ export function useWebSocket(tableId: string | null) {
         }
         break;
       }
-      case 'community_cards':
       case 'player_joined':
+        playSound('player_joined');
+        break;
       case 'player_left':
+        playSound('player_left');
+        break;
+      case 'community_cards':
       case 'pot_update':
       case 'card_revealed':
       case 'rebuy_denied':

@@ -15,6 +15,7 @@ import { DanilkaOverlay } from '../Dealer/DanilkaOverlay';
 import { CommunityCards } from './CommunityCards';
 import { SettingsPanel } from '../Controls/SettingsPanel';
 import { CashoutLedgerEntry, GameLogEntry } from '../../types';
+import { formatChips } from '../../formatChips';
 import './Table.css';
 
 export function TableView() {
@@ -30,6 +31,7 @@ export function TableView() {
   const kickedCashout = useStore((s) => s.kickedCashout);
   const clearAfkTable = useStore((s) => s.clearAfkTable);
   const setGameState = useStore((s) => s.setGameState);
+  const displayInBB = useStore((s) => s.displayInBB);
   const [ledgerCollapsed, setLedgerCollapsed] = useState(false);
 
   useWebSocket(tableId || null);
@@ -143,7 +145,7 @@ export function TableView() {
           {/* Pot */}
           <div className="pot-display">
             {(gameState?.pot || 0) > 0 && (
-              <span className="pot-amount">{S.potDisplay}: {gameState?.pot}</span>
+              <span className="pot-amount">{S.potDisplay}: {formatChips(gameState?.pot || 0, displayInBB, gameState?.blind_big || 0)}</span>
             )}
           </div>
 

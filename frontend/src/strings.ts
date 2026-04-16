@@ -137,5 +137,6 @@ export const S = {
   settingCommunityCardSize: 'Карты на столе',
   settingPlayerCardSize: 'Карты игроков',
   settingControlsSize: 'Меню действий',
+  settingDisplayBB: 'Отображать в ББ',
   settingReset: 'Сбросить',
 };
