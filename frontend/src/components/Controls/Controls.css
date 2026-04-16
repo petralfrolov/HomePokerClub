@@ -349,12 +349,17 @@
 /* === Mobile Responsive === */
 @media (max-width: 768px) {
   .game-controls {
-    left: 0;
-    right: 0;
-    transform: none;
+    position: static;
+    left: auto;
+    right: auto;
+    bottom: auto;
+    width: 100%;
     gap: 0;
+    padding: 0;
     padding-left: var(--safe-left, 0px);
     padding-right: var(--safe-right, 0px);
+    padding-bottom: var(--safe-bottom, 0px);
+    flex-shrink: 0;
   }
 
   .controls-main {

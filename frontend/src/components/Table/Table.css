@@ -42,6 +42,7 @@
   justify-content: center;
   position: relative;
   overflow: hidden;
+  min-height: 0;
 }
 
 /* Poker table */
@@ -460,12 +461,18 @@
   }
 
   .cashout-ledger {
-    bottom: 8px;
-    left: 8px;
+    bottom: auto;
+    left: auto;
+    top: 88px;
+    right: 8px;
     padding: 0.5rem 0.7rem;
-    min-width: 180px;
-    max-width: 280px;
+    min-width: 0;
+    max-width: calc(100vw - 16px);
     font-size: 0.75rem;
+  }
+
+  .cashout-ledger.collapsed {
+    padding: 0.35rem 0.6rem;
   }
 
   .stalling-text {

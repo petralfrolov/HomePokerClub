@@ -33,7 +33,9 @@ export function TableView() {
   const clearAfkTable = useStore((s) => s.clearAfkTable);
   const setGameState = useStore((s) => s.setGameState);
   const displayInBB = useStore((s) => s.displayInBB);
-  const [ledgerCollapsed, setLedgerCollapsed] = useState(false);
+  const [ledgerCollapsed, setLedgerCollapsed] = useState<boolean>(() =>
+    typeof window !== 'undefined' && window.matchMedia('(max-width: 768px)').matches
+  );
 
   useWebSocket(tableId || null);
 
@@ -135,6 +137,7 @@ export function TableView() {
           {tableConfig?.type === 'cash' && (
             <button className="btn-cashout" onClick={handleCashout}>{S.cashoutBtn}</button>
           )}
+          <SettingsPanel />
         </div>
       </div>
 
@@ -170,8 +173,7 @@ export function TableView() {
       {/* Danilka overlay */}
       {danilkaEvent && <DanilkaOverlay />}
 
-      {/* Settings */}
-      <SettingsPanel />
+      {/* Hotkeys help (Settings is rendered in top bar) */}
       <HotkeysPanel />
 
       {/* Stalling overlay */}
