@@ -66,6 +66,7 @@ class PlayerState:
     has_acted_this_round: bool = False
     away: bool = False
     pending_away: bool = False  # will become away at next hand start
+    pending_approval: bool = False  # waiting for admin approval to join
     time_bank: int = DEFAULT_TIME_BANK  # remaining time bank in seconds
     total_buyin: int = 0  # total chips bought in
     total_cashout: int = 0  # total chips cashed out
@@ -207,6 +208,15 @@ class GameEngine:
 
         # Reset player states
         for p in state.players:
+            # Players awaiting admin approval stay out of the game
+            if p.pending_approval:
+                p.status = "sitting_out"
+                p.hole_cards = []
+                p.bet_this_round = 0
+                p.total_bet_this_hand = 0
+                p.revealed_cards = []
+                p.has_acted_this_round = False
+                continue
             # Convert pending_away to away at hand start
             if p.pending_away:
                 p.away = True
@@ -808,6 +818,7 @@ class GameEngine:
                 "status": p.status,
                 "away": p.away,
                 "pending_away": p.pending_away,
+                "pending_approval": p.pending_approval,
                 "revealed_cards": [
                     Card.int_to_str(p.hole_cards[i])
                     for i in p.revealed_cards

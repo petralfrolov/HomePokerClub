@@ -117,6 +117,18 @@ class RebuyDeny(BaseModel):
     target_player_id: str
 
 
+# ---------- Join approval ----------
+
+class JoinApprove(BaseModel):
+    session_id: str  # admin
+    target_player_id: str
+
+
+class JoinDeny(BaseModel):
+    session_id: str  # admin
+    target_player_id: str
+
+
 # ---------- Social ----------
 
 class TipPlayer(BaseModel):

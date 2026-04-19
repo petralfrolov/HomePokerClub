@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
 import { useStore, toast } from '../../store/useStore';
 import { api } from '../../api';
 import { S } from '../../strings';
@@ -26,9 +25,6 @@ export function GameControls() {
   const DRAG_STORAGE_KEY = 'controls-drag-position';
   const savedPos = (() => { try { const v = localStorage.getItem(DRAG_STORAGE_KEY); return v ? JSON.parse(v) : { x: 0, y: 0 }; } catch { return { x: 0, y: 0 }; } })();
   const dragPositionRef = useRef<{ x: number; y: number }>(savedPos);
-  const navigate = useNavigate();
-  const setTableId = useStore((s) => s.setTableId);
-  const setGameState = useStore((s) => s.setGameState);
   const [hasRequestedRebuy, setHasRequestedRebuy] = useState(false);
   const [pendingAllIn, setPendingAllIn] = useState(false);
 
@@ -64,42 +60,27 @@ export function GameControls() {
       const elapsed = (Date.now() - rebuyWindow.startedAt) / 1000;
       const left = Math.max(0, rebuyWindow.timeout - elapsed);
       setRebuyTimeLeft(left);
-      if (left === 0 && !hasRequestedRebuy) {
-        // Don't call leaveTable — the server removes bust players after
-        // the rebuy window closes and adds them to the ledger
-        setTableId(null);
-        setGameState(null);
-        navigate('/');
-      }
     };
     update();
     const interval = setInterval(update, 100);
     return () => clearInterval(interval);
-  }, [isBustInWindow, rebuyWindow, hasRequestedRebuy, navigate, setTableId, setGameState]);
+  }, [isBustInWindow, rebuyWindow]);
 
-  // Reset rebuy request state when a new rebuy window opens
+  // Reset rebuy request state when a new rebuy window opens,
+  // or after admin responds to a previous request.
   useEffect(() => {
     if (rebuyWindow) {
       setHasRequestedRebuy(false);
     }
   }, [rebuyWindow]);
 
-  // Navigate home if rebuy window closed but player is still bust after requesting rebuy
+  // When the player's stack becomes positive again (rebuy approved),
+  // clear the "waiting" state so the button can be used again next time.
   useEffect(() => {
-    if (myPlayer?.status === 'bust' && hasRequestedRebuy && rebuyWindow === null) {
-      const timeout = setTimeout(() => {
-        const cur = useStore.getState().gameState?.players.find(
-          (p) => p.session_id === useStore.getState().sessionId
-        );
-        if (cur?.status === 'bust') {
-          setTableId(null);
-          setGameState(null);
-          navigate('/');
-        }
-      }, 2000);
-      return () => clearTimeout(timeout);
+    if ((myPlayer?.stack ?? 0) > 0 && hasRequestedRebuy) {
+      setHasRequestedRebuy(false);
     }
-  }, [myPlayer?.status, hasRequestedRebuy, rebuyWindow, navigate, setTableId, setGameState]);
+  }, [myPlayer?.stack, hasRequestedRebuy]);
 
   // Reset raise slider when the street (stage) or round changes
   const stageKey = `${gameState?.round_number}-${gameState?.stage}`;
@@ -141,6 +122,9 @@ export function GameControls() {
                   await api.requestRebuy(tableId!, { session_id: sessionId, amount: defaultAmount });
                   setHasRequestedRebuy(true);
                   toast('Запрос на додеп отправлен администратору', 'info');
+                  // If admin doesn't respond within 15s, re-enable the button so
+                  // the player can retry (e.g. after explicit denial).
+                  setTimeout(() => setHasRequestedRebuy(false), 15000);
                 } catch (e: any) {
                   toast(e.message || 'Не удалось отправить запрос', 'error');
                 }
@@ -175,6 +159,47 @@ export function GameControls() {
   const inActiveHand = !!gameState.stage && gameState.stage !== 'waiting';
   const hasCards = myPlayer.hole_cards && myPlayer.hole_cards.length > 0;
   const canAct = isMyTurn && myPlayer.status === 'active' && hasCards;
+
+  // Player awaiting admin approval to join: show waiting message only
+  if (myPlayer.pending_approval) {
+    return (
+      <motion.div
+        className="game-controls"
+        initial={{ y: 100, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.3 }}
+      >
+        <div className="controls-main">
+          <div className="controls-secondary" style={{ opacity: 1, textAlign: 'center' }}>
+            {S.waitingForApproval}
+          </div>
+        </div>
+      </motion.div>
+    );
+  }
+
+  // Rebuy approved mid-hand: player sits out until next hand.
+  // status==="sitting_out" && away===false && stack>0 ⇒ waiting for next hand
+  if (
+    myPlayer.status === 'sitting_out'
+    && !myPlayer.away
+    && myPlayer.stack > 0
+  ) {
+    return (
+      <motion.div
+        className="game-controls"
+        initial={{ y: 100, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.3 }}
+      >
+        <div className="controls-main">
+          <div className="controls-secondary" style={{ opacity: 1, textAlign: 'center' }}>
+            {S.waitingForNextHand}
+          </div>
+        </div>
+      </motion.div>
+    );
+  }
 
   // AFK/sitting_out player: show return button
   if (myPlayer.away || myPlayer.status === 'sitting_out') {

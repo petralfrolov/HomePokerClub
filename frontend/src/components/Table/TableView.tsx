@@ -10,7 +10,7 @@ import { PlayerSeat } from '../Player/PlayerSeat';
 import { GameControls } from '../Controls/GameControls';
 import { DealerAvatar } from '../Dealer/DealerAvatar';
 import { FrolTipModal } from '../Modals/FrolTipModal';
-import { RebuyModal } from '../Modals/RebuyModal';
+import { ApprovalModal } from '../Modals/ApprovalModal';
 import { DanilkaOverlay } from '../Dealer/DanilkaOverlay';
 import { CommunityCards } from './CommunityCards';
 import { SettingsPanel } from '../Controls/SettingsPanel';
@@ -169,7 +169,7 @@ export function TableView() {
 
       {/* Modals */}
       <FrolTipModal />
-      <RebuyModal />
+      <ApprovalModal />
 
       {/* Danilka overlay */}
       {danilkaEvent && <DanilkaOverlay />}

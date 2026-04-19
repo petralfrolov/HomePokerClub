@@ -183,6 +183,19 @@ export const api = {
       body: JSON.stringify(data),
     }),
 
+  // Join approval (admin)
+  approveJoin: (tableId: string, data: { session_id: string; target_player_id: string }) =>
+    request<{ ok: boolean }>(`/tables/${tableId}/join/approve`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  denyJoin: (tableId: string, data: { session_id: string; target_player_id: string }) =>
+    request<{ ok: boolean }>(`/tables/${tableId}/join/deny`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
   // Frol
   frolTip: (tableId: string, data: { session_id: string; amount: number }) =>
     request<{ ok: boolean }>(`/tables/${tableId}/frol-tip`, {

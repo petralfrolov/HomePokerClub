@@ -18,10 +18,10 @@ for (const [filePath, url] of Object.entries(soundModules)) {
 
 // Map sound name → number of numbered file variants
 const SOUND_VARIANTS: Record<string, number> = {
-  card_received: 2,
+  card_received: 1,
   your_turn: 1,
   fold: 2,
-  check: 2,
+  check: 1,
   call: 1,
   allin: 2,
   raise: 2,

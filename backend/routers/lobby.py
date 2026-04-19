@@ -16,6 +16,7 @@ from backend.schemas.schemas import (
     PlayerInfo, JoinTable, JoinResult, LeaveTable, CashoutRequest, KickPlayer, OkResponse,
 )
 from backend.services.game_engine import game_engine, GameState, PlayerState
+from backend.services.rebuy import rebuy_manager
 from backend.ws.manager import manager as ws_manager
 
 router = APIRouter(prefix="/api/tables", tags=["tables"])
@@ -189,11 +190,15 @@ async def join_table(table_id: str, body: JoinTable, db: AsyncSession = Depends(
     if is_admin:
         table.admin_session_id = body.session_id
 
+    # Non-admins must be approved by the table admin before entering the game.
+    requires_approval = not is_admin
+
     # Get avatar
     sess_result = await db.execute(select(Session).where(Session.id == body.session_id))
     sess = sess_result.scalar_one_or_none()
     avatar_url = sess.avatar_url if sess else None
 
+    db_status = "sitting_out" if requires_approval else "active"
     player = Player(
         id=str(uuid.uuid4()),
         session_id=body.session_id,
@@ -204,6 +209,7 @@ async def join_table(table_id: str, body: JoinTable, db: AsyncSession = Depends(
         stack=stack,
         time_bank=table.time_bank_max,
         is_admin=is_admin,
+        status=db_status,
     )
     db.add(player)
 
@@ -216,8 +222,11 @@ async def join_table(table_id: str, body: JoinTable, db: AsyncSession = Depends(
     # Add to in-memory game
     game = game_engine.get_game(table_id)
     if game:
-        # If a hand is in progress, new player sits out until next hand
-        join_status = "folded" if game.stage not in ("waiting",) else "active"
+        if requires_approval:
+            join_status = "sitting_out"
+        else:
+            # If a hand is in progress, new player sits out until next hand
+            join_status = "folded" if game.stage not in ("waiting",) else "active"
         game_engine.add_player(
             table_id,
             PlayerState(
@@ -230,6 +239,8 @@ async def join_table(table_id: str, body: JoinTable, db: AsyncSession = Depends(
                 total_buyin=stack,
                 status=join_status,
                 avatar_url=avatar_url,
+                away=requires_approval,
+                pending_approval=requires_approval,
             ),
         )
 
@@ -242,10 +253,32 @@ async def join_table(table_id: str, body: JoinTable, db: AsyncSession = Depends(
             "avatar_url": avatar_url,
             "seat_index": seat_index,
             "stack": stack,
-            "status": join_status if game else "active",
+            "status": join_status if game else db_status,
             "is_admin": is_admin,
+            "pending_approval": requires_approval,
         }
     })
+
+    # If approval is required, notify the admin with a join request
+    if requires_approval and game:
+        req = rebuy_manager.create_request(
+            table_id=table_id,
+            player_id=player.id,
+            session_id=body.session_id,
+            amount=stack,
+            kind="join",
+        )
+        await ws_manager.send_personal(
+            table_id,
+            table.admin_session_id,
+            "join_requested",
+            {
+                "player_id": player.id,
+                "nickname": body.nickname,
+                "amount": stack,
+                "request_id": req.request_id,
+            },
+        )
 
     # Broadcast updated game state so all clients see the new player
     if game:

@@ -22,7 +22,10 @@ export function PlayerContextMenu({ player, onClose, openLeft }: Props) {
   const sb = gameState?.blind_small || 1;
   const bb = gameState?.blind_big || 0;
   const myPlayer = gameState?.players.find((p) => p.session_id === sessionId);
-  const maxTip = Math.max(sb, Math.floor((myPlayer?.stack || sb) / sb) * sb);
+  // Can tip up to (own stack - 1 BB), snapped to SB step. Must keep ≥ 1 BB.
+  const rawMaxTip = Math.max(0, (myPlayer?.stack || 0) - bb);
+  const maxTip = Math.floor(rawMaxTip / sb) * sb;
+  const canTip = maxTip >= sb;
 
   const [tipAmount, setTipAmount] = useState(sb);
   const [showTipInput, setShowTipInput] = useState(false);
@@ -86,14 +89,19 @@ export function PlayerContextMenu({ player, onClose, openLeft }: Props) {
               min={sb}
               max={maxTip}
               step={sb}
-              value={tipAmount}
+              value={Math.min(tipAmount, maxTip)}
               onChange={(e) => setTipAmount(parseInt(e.target.value))}
             />
             <span className="tip-amount-display">{tipAmount}</span>
-            <button onClick={handleTip}>{S.send}</button>
+            <button onClick={handleTip} disabled={!canTip || tipAmount > maxTip}>{S.send}</button>
           </div>
         ) : (
-          <button className="context-menu-item" onClick={() => setShowTipInput(true)}>
+          <button
+            className="context-menu-item"
+            onClick={() => setShowTipInput(true)}
+            disabled={!canTip}
+            title={!canTip ? S.tipDisabledTooSmall : undefined}
+          >
             {S.tipBtn}
           </button>
         )}

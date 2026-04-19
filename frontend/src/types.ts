@@ -19,6 +19,7 @@ export interface PlayerInfo {
   status: 'active' | 'folded' | 'allin' | 'bust' | 'away' | 'sitting_out';
   away: boolean;
   pending_away: boolean;
+  pending_approval?: boolean;
   hole_cards: string[] | null;
   revealed_cards: string[];
   hand_name: string | null;

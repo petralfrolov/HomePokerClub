@@ -14,7 +14,8 @@ export function useWebSocket(tableId: string | null) {
   const sessionId = useStore((s) => s.sessionId);
   const setGameState = useStore((s) => s.setGameState);
   const setFrolTipRequest = useStore((s) => s.setFrolTipRequest);
-  const setPendingRebuy = useStore((s) => s.setPendingRebuy);
+  const addApproval = useStore((s) => s.addApproval);
+  const removeApprovalByPlayer = useStore((s) => s.removeApprovalByPlayer);
   const setDanilkaEvent = useStore((s) => s.setDanilkaEvent);
   const setTurnTimer = useStore((s) => s.setTurnTimer);
   const setRebuyWindow = useStore((s) => s.setRebuyWindow);
@@ -32,7 +33,21 @@ export function useWebSocket(tableId: string | null) {
         playSound('frol_tips');
         break;
       case 'rebuy_requested':
-        setPendingRebuy(data as any);
+        addApproval({
+          kind: 'rebuy',
+          request_id: (data as any).request_id,
+          player_id: (data as any).player_id,
+          amount: (data as any).amount,
+        });
+        break;
+      case 'join_requested':
+        addApproval({
+          kind: 'join',
+          request_id: (data as any).request_id,
+          player_id: (data as any).player_id,
+          amount: (data as any).amount,
+          nickname: (data as any).nickname,
+        });
         break;
       case 'danilka_event':
         setDanilkaEvent(true);
@@ -116,6 +131,7 @@ export function useWebSocket(tableId: string | null) {
         playSound('blinds_up');
         break;
       case 'rebuy_approved':
+        removeApprovalByPlayer((data as any).player_id, 'rebuy');
         playSound('rebuy');
         break;
       case 'round_end': {
@@ -194,8 +210,23 @@ export function useWebSocket(tableId: string | null) {
       case 'community_cards':
       case 'pot_update':
       case 'card_revealed':
-      case 'rebuy_denied':
         break;
+      case 'rebuy_denied':
+        removeApprovalByPlayer((data as any).player_id, 'rebuy');
+        break;
+      case 'join_approved':
+        removeApprovalByPlayer((data as any).player_id, 'join');
+        break;
+      case 'join_denied': {
+        removeApprovalByPlayer((data as any).player_id, 'join');
+        // The rejected player is forced back to the lobby.
+        try { wsRef.current?.close(1000, 'join_denied'); } catch { /* ignore */ }
+        useStore.getState().setTableId(null);
+        useStore.getState().setTableConfig(null);
+        useStore.getState().setGameState(null);
+        toast('Администратор отклонил вашу заявку на вход за стол', 'error', 4000);
+        break;
+      }
       case 'player_avatar_updated': {
         const curState = useStore.getState().gameState;
         if (curState) {
@@ -221,7 +252,7 @@ export function useWebSocket(tableId: string | null) {
       default:
         console.log('Unknown WS event:', data.event);
     }
-  }, [setGameState, setFrolTipRequest, setPendingRebuy, setDanilkaEvent, setTurnTimer, setRebuyWindow, setCashoutPending, setStallingAccused, setWinnerPlayerIds]);
+  }, [setGameState, setFrolTipRequest, addApproval, removeApprovalByPlayer, setDanilkaEvent, setTurnTimer, setRebuyWindow, setCashoutPending, setStallingAccused, setWinnerPlayerIds]);
 
   // Keep handleEvent accessible to the effect via a ref so effect deps stay minimal.
   const handleEventRef = useRef(handleEvent);

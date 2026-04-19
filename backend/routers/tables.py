@@ -30,7 +30,7 @@ from backend.schemas.schemas import (
     TipPlayer, AccuseStalling, RevealCard, AwayStatus,
     FrolTip, FrolDecline, OkResponse,
     ActionResponse, RebuyRequestResponse, AccuseStallingResponse, FrolDeclineResponse,
-    ChangeDealerType,
+    ChangeDealerType, JoinApprove, JoinDeny,
 )
 from backend.services.game_engine import game_engine, PlayerState
 from backend.services.dealer import (
@@ -240,7 +240,10 @@ async def _post_hand_continuation(table_id: str, game, end_data: dict):
     delay = SHOWDOWN_DELAY if end_data.get("showdown") else FOLD_WIN_DELAY
 
     # Broadcast rebuy window BEFORE Frol tip wait, so bust players see the UI immediately.
-    bust_players = [p for p in game.players if p.status == "bust"]
+    # Only consider players who went bust THIS hand — already-AFK bust players
+    # (away=True, from a previous unused rebuy window) are skipped so the timer
+    # is not restarted for them every hand.
+    bust_players = [p for p in game.players if p.status == "bust" and not p.away]
 
     if bust_players and game.stage == "waiting":
         game._rebuy_window_active = True
@@ -280,7 +283,7 @@ async def _post_hand_continuation(table_id: str, game, end_data: dict):
     # Process pending cashouts
     await _process_pending_cashouts(table_id, game)
 
-    bust_players = [p for p in game.players if p.status == "bust"]
+    bust_players = [p for p in game.players if p.status == "bust" and not p.away]
     non_bust = [p for p in game.players if p.status != "bust" and p.stack > 0]
 
     if bust_players and game.stage == "waiting":
@@ -297,32 +300,21 @@ async def _post_hand_continuation(table_id: str, game, end_data: dict):
         game._rebuy_window_active = False
         game._rebuy_window_bust_ids = set()
 
-        # Remove bust players who didn't rebuy from game and DB
-        still_bust = [p for p in game.players if p.player_id in {bp.player_id for bp in bust_players} and p.status == "bust"]
+        # Bust players who didn't rebuy in time are kept at the table as AFK.
+        # They will remain with status="bust" (stack=0) and away=True so that
+        # subsequent hands skip them, but they can request rebuy at any time
+        # and be reinstated by the admin.
+        still_bust = [
+            p for p in game.players
+            if p.player_id in {bp.player_id for bp in bust_players} and p.status == "bust"
+        ]
         for p in still_bust:
-            # Add to cashout ledger before removal so they stay visible
-            game.cashout_ledger.append({
-                "nickname": p.nickname,
-                "total_buyin": p.total_buyin,
-                "total_cashout": 0,
-                "current_stack": 0,
-            })
-            game_engine.remove_player(table_id, p.session_id)
-            # Remove from DB
-            async with async_session_factory() as db:
-                from sqlalchemy import select as sa_select
-                result = await db.execute(
-                    sa_select(Player).where(
-                        Player.table_id == table_id,
-                        Player.session_id == p.session_id,
-                    )
-                )
-                db_player = result.scalar_one_or_none()
-                if db_player:
-                    await db.delete(db_player)
-                    await db.commit()
-            await ws_manager.broadcast_all(table_id, "player_left", {
+            p.away = True
+            p.pending_away = False
+            await ws_manager.broadcast_all(table_id, "player_away", {
                 "player_id": p.player_id,
+                "away": True,
+                "pending_away": False,
             })
 
         await ws_manager.broadcast_all(table_id, "rebuy_window_closed", {})
@@ -671,8 +663,16 @@ async def approve_rebuy(table_id: str, body: RebuyApprove, db: AsyncSession = De
 
     target.stack += body.amount
     target.total_buyin += body.amount
-    if target.status == "bust":
+    # Returning from bust/AFK via approved rebuy.
+    # If a hand is in progress, the player must wait until the NEXT hand —
+    # they have no cards for the current one. start_new_hand() will promote
+    # their status to "active" because away=False and stack>0.
+    target.away = False
+    target.pending_away = False
+    if game.stage in ("waiting",):
         target.status = "active"
+    else:
+        target.status = "sitting_out"
 
     # Update DB
     db_result = await db.execute(
@@ -711,6 +711,92 @@ async def deny_rebuy(table_id: str, body: RebuyDeny, db: AsyncSession = Depends(
     return OkResponse()
 
 
+# ---- Join approval ----
+
+@router.post("/join/approve", response_model=OkResponse)
+async def approve_join(table_id: str, body: JoinApprove, db: AsyncSession = Depends(get_db)):
+    game = _get_game_or_404(table_id)
+
+    # Verify admin
+    result = await db.execute(select(Table).where(Table.id == table_id))
+    table = result.scalar_one_or_none()
+    if not table or table.admin_session_id != body.session_id:
+        raise HTTPException(403, "Only admin can approve joins")
+
+    target = game.get_player_by_id(body.target_player_id)
+    if not target:
+        raise HTTPException(404, "Target player not found")
+    if not target.pending_approval:
+        raise HTTPException(400, "Player is not pending approval")
+
+    target.pending_approval = False
+    target.away = False
+    target.pending_away = False
+    # Join mid-hand means sit out until next hand; otherwise active now.
+    if game.stage in ("waiting",):
+        target.status = "active"
+    else:
+        target.status = "folded"
+
+    db_result = await db.execute(
+        select(Player).where(Player.id == body.target_player_id)
+    )
+    db_player = db_result.scalar_one_or_none()
+    if db_player:
+        db_player.status = target.status
+        await db.commit()
+
+    await ws_manager.broadcast_all(table_id, "join_approved", {
+        "player_id": body.target_player_id,
+    })
+    await _broadcast_game_state(table_id, game)
+
+    return OkResponse()
+
+
+@router.post("/join/deny", response_model=OkResponse)
+async def deny_join(table_id: str, body: JoinDeny, db: AsyncSession = Depends(get_db)):
+    game = _get_game_or_404(table_id)
+
+    result = await db.execute(select(Table).where(Table.id == table_id))
+    table = result.scalar_one_or_none()
+    if not table or table.admin_session_id != body.session_id:
+        raise HTTPException(403, "Only admin can deny joins")
+
+    target = game.get_player_by_id(body.target_player_id)
+    if not target:
+        raise HTTPException(404, "Target player not found")
+    if not target.pending_approval:
+        raise HTTPException(400, "Player is not pending approval")
+
+    target_session = target.session_id
+    target_player_id = target.player_id
+
+    # Remove player from DB and in-memory game
+    db_result = await db.execute(
+        select(Player).where(
+            Player.table_id == table_id,
+            Player.id == target_player_id,
+        )
+    )
+    db_player = db_result.scalar_one_or_none()
+    if db_player:
+        await db.delete(db_player)
+        await db.commit()
+    game_engine.remove_player(table_id, target_session)
+
+    # Notify the rejected player personally, then broadcast removal to others
+    await ws_manager.send_personal(table_id, target_session, "join_denied", {
+        "player_id": target_player_id,
+    })
+    await ws_manager.broadcast_all(table_id, "player_left", {
+        "player_id": target_player_id,
+    })
+    await _broadcast_game_state(table_id, game)
+
+    return OkResponse()
+
+
 # ---- Social ----
 
 @router.post("/tip", response_model=OkResponse)
@@ -722,6 +808,12 @@ async def tip_player(table_id: str, body: TipPlayer):
         raise HTTPException(400, "Not enough chips")
     if body.amount <= 0:
         raise HTTPException(400, "Invalid tip amount")
+    # Player must retain at least 1 BB after tipping (can't give away the whole stack).
+    max_tip = player.stack - game.blind_big
+    if max_tip <= 0:
+        raise HTTPException(400, "Stack too small to tip")
+    if body.amount > max_tip:
+        raise HTTPException(400, f"Maximum tip is {max_tip}")
 
     target = game.get_player_by_id(body.target_player_id)
     if not target:

@@ -20,6 +20,19 @@ export interface GameSlice {
   pendingRebuy: { player_id: string; amount: number; request_id: string } | null;
   setPendingRebuy: (req: GameSlice['pendingRebuy']) => void;
 
+  // Queue of admin approval requests (rebuy + join). Rendered sequentially
+  // so concurrent requests from multiple players no longer overwrite each other.
+  pendingApprovals: Array<{
+    kind: 'rebuy' | 'join';
+    request_id: string;
+    player_id: string;
+    amount: number;
+    nickname?: string;
+  }>;
+  addApproval: (req: GameSlice['pendingApprovals'][number]) => void;
+  removeApproval: (request_id: string) => void;
+  removeApprovalByPlayer: (player_id: string, kind?: 'rebuy' | 'join') => void;
+
   // Danilka event animation
   danilkaEvent: boolean;
   setDanilkaEvent: (v: boolean) => void;
@@ -65,6 +78,26 @@ export const createGameSlice: StateCreator<GameSlice, [], [], GameSlice> = (set)
 
   pendingRebuy: null,
   setPendingRebuy: (req) => set({ pendingRebuy: req }),
+
+  pendingApprovals: [],
+  addApproval: (req) =>
+    set((state) => {
+      // Avoid duplicates (e.g. reconnect re-broadcasts) by request_id
+      if (state.pendingApprovals.some((a) => a.request_id === req.request_id)) {
+        return state;
+      }
+      return { pendingApprovals: [...state.pendingApprovals, req] };
+    }),
+  removeApproval: (request_id) =>
+    set((state) => ({
+      pendingApprovals: state.pendingApprovals.filter((a) => a.request_id !== request_id),
+    })),
+  removeApprovalByPlayer: (player_id, kind) =>
+    set((state) => ({
+      pendingApprovals: state.pendingApprovals.filter(
+        (a) => !(a.player_id === player_id && (!kind || a.kind === kind))
+      ),
+    })),
 
   danilkaEvent: false,
   setDanilkaEvent: (v) => set({ danilkaEvent: v }),
