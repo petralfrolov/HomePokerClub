@@ -200,12 +200,48 @@ async def websocket_endpoint(websocket: WebSocket, table_id: str, session_id: st
         await ws_manager.send_personal(table_id, session_id, "game_state", snapshot)
 
     # Send shtos blocks for this session (if any are stored in memory).
-    from backend.services.shtos import shtos_manager as _shtos_mgr
+    from backend.services.shtos import shtos_manager as _shtos_mgr, FULL_DECK as _FULL_DECK
     blocks = _shtos_mgr.get_blocks(session_id)
     if blocks:
         await ws_manager.send_personal(
             table_id, session_id, "shtos_blocks", {"blocked_player_ids": blocks}
         )
+
+    # Restore in-flight shtos modal state on reconnect (e.g. page reload).
+    if game:
+        from backend.routers.tables import SHTOS_OFFER_TIMEOUT_SECONDS as _SHTOS_TIMEOUT
+        import time as _time
+        active = _shtos_mgr.get_active_for_session(table_id, session_id)
+        if active:
+            initiator = game.get_player_by_session(active.initiator_session)
+            target = game.get_player_by_session(active.target_session)
+            base_payload = {
+                "offer_id": active.offer_id,
+                "from_id": active.initiator_id,
+                "to_id": active.target_id,
+                "from_nickname": initiator.nickname if initiator else None,
+                "to_nickname": target.nickname if target else None,
+                "amount": active.amount,
+            }
+            if active.status == "pending":
+                # Adjust the timeout to the time still remaining so the
+                # client-side progress bar resumes accurately.
+                elapsed = _time.time() - active.created_at
+                remaining = max(1, int(_SHTOS_TIMEOUT - elapsed))
+                base_payload["timeout"] = remaining
+                event = (
+                    "shtos_offer_sent"
+                    if session_id == active.initiator_session
+                    else "shtos_offered"
+                )
+                await ws_manager.send_personal(table_id, session_id, event, base_payload)
+            elif active.status == "accepted":
+                await ws_manager.send_personal(
+                    table_id,
+                    session_id,
+                    "shtos_accepted",
+                    {**base_payload, "picker_id": active.picker_id, "deck": _FULL_DECK},
+                )
 
     try:
         while True:

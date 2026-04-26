@@ -18,6 +18,7 @@ the opponent wins. Result is resolved server-side and broadcast for animation.
 from __future__ import annotations
 
 import random
+import time
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -68,6 +69,7 @@ class ShtosOffer:
     picker_id: str | None = None        # player_id chosen randomly on accept
     picked_card: str | None = None       # card picked by picker (rank+suit)
     resolution: ShtosResolution | None = None
+    created_at: float = field(default_factory=time.time)
 
 
 class ShtosManager:
@@ -105,6 +107,23 @@ class ShtosManager:
 
     def get(self, offer_id: str) -> ShtosOffer | None:
         return self._offers.get(offer_id)
+
+    def get_active_for_session(
+        self, table_id: str, session_id: str
+    ) -> ShtosOffer | None:
+        """Return the first pending or accepted offer involving this session.
+
+        Used to restore the shtos modal state when a participant reconnects
+        (e.g. after a page reload) mid-flow.
+        """
+        for o in self._offers.values():
+            if o.table_id != table_id:
+                continue
+            if o.status not in ("pending", "accepted"):
+                continue
+            if session_id in (o.initiator_session, o.target_session):
+                return o
+        return None
 
     def get_pending_between(
         self, table_id: str, player_a_id: str, player_b_id: str
