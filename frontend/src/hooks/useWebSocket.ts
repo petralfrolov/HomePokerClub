@@ -211,6 +211,116 @@ export function useWebSocket(tableId: string | null) {
       case 'pot_update':
       case 'card_revealed':
         break;
+      case 'shtos_offered': {
+        useStore.getState().setShtos({
+          offer: {
+            offer_id: data.offer_id,
+            from_id: data.from_id,
+            to_id: data.to_id,
+            from_nickname: data.from_nickname,
+            to_nickname: data.to_nickname,
+            amount: data.amount,
+            timeout: data.timeout,
+            received_at: Date.now(),
+          },
+          phase: 'pending_incoming',
+        });
+        break;
+      }
+      case 'shtos_offer_sent': {
+        useStore.getState().setShtos({
+          offer: {
+            offer_id: data.offer_id,
+            from_id: data.from_id,
+            to_id: data.to_id,
+            from_nickname: data.from_nickname,
+            to_nickname: data.to_nickname,
+            amount: data.amount,
+            timeout: data.timeout,
+            received_at: Date.now(),
+          },
+          phase: 'pending_outgoing',
+        });
+        break;
+      }
+      case 'shtos_cancelled': {
+        const cur = useStore.getState().shtos;
+        if (cur && cur.offer.offer_id === data.offer_id) {
+          useStore.getState().setShtos(null);
+        }
+        if (data.reason === 'timeout') {
+          toast('Время на ответ истекло — предложение штоса отменено', 'info', 3000);
+        }
+        break;
+      }
+      case 'shtos_declined': {
+        const cur = useStore.getState().shtos;
+        if (cur && cur.offer.offer_id === data.offer_id) {
+          useStore.getState().setShtos(null);
+        }
+        const me = useStore.getState().gameState?.players.find(
+          (p) => p.session_id === useStore.getState().sessionId
+        );
+        if (me && data.from_id === me.player_id) {
+          toast('Игрок отклонил предложение штоса', 'info', 3500);
+        }
+        break;
+      }
+      case 'shtos_accepted': {
+        const cur = useStore.getState().shtos;
+        const offerInfo = cur?.offer ?? {
+          offer_id: data.offer_id,
+          from_id: data.from_id,
+          to_id: data.to_id,
+          amount: data.amount,
+        };
+        useStore.getState().setShtos({
+          offer: { ...offerInfo, amount: data.amount },
+          phase: 'card_pick',
+          picker_id: data.picker_id,
+          deck: data.deck,
+        });
+        break;
+      }
+      case 'shtos_resolved': {
+        const me = useStore.getState().gameState?.players.find(
+          (p) => p.session_id === useStore.getState().sessionId
+        );
+        const isParticipant = !!me && (me.player_id === data.from_id || me.player_id === data.to_id);
+        if (isParticipant) {
+          useStore.getState().setShtos({
+            offer: {
+              offer_id: data.offer_id,
+              from_id: data.from_id,
+              to_id: data.to_id,
+              amount: data.amount,
+            },
+            phase: 'animating',
+            picker_id: data.picker_id,
+            resolution: {
+              offer_id: data.offer_id,
+              from_id: data.from_id,
+              to_id: data.to_id,
+              amount: data.amount,
+              picker_id: data.picker_id,
+              picked_card: data.picked_card,
+              deck_sequence: data.deck_sequence,
+              picker_pile: data.picker_pile,
+              banker_pile: data.banker_pile,
+              matching_card: data.matching_card,
+              matching_pile: data.matching_pile,
+              matching_index: data.matching_index,
+              winner_id: data.winner_id,
+              loser_id: data.loser_id,
+            },
+          });
+        }
+        break;
+      }
+      case 'shtos_blocks': {
+        useStore.getState().setShtosBlocks(data.blocked_player_ids || []);
+        break;
+      }
       case 'rebuy_denied':
         removeApprovalByPlayer((data as any).player_id, 'rebuy');
         break;

@@ -30,6 +30,16 @@ export function PlayerContextMenu({ player, onClose, openLeft }: Props) {
   const [tipAmount, setTipAmount] = useState(sb);
   const [showTipInput, setShowTipInput] = useState(false);
 
+  // Shtos: amount in [0.5 BB, min(stacks) - 1 BB], snapped to SB step.
+  const shtosBlocks = useStore((s) => s.shtosBlocks);
+  const isBlocked = shtosBlocks.includes(player.player_id);
+  const shtosMin = Math.max(1, Math.floor(bb / 2));
+  const rawShtosMax = Math.max(0, Math.min(myPlayer?.stack || 0, player.stack) - bb);
+  const shtosMax = Math.floor(rawShtosMax / sb) * sb;
+  const canShtos = shtosMax >= shtosMin && !player.away && !player.pending_approval && player.status !== 'bust';
+  const [shtosAmount, setShtosAmount] = useState(Math.max(shtosMin, sb));
+  const [showShtosInput, setShowShtosInput] = useState(false);
+
   const isTargetTurn = gameState?.current_player_seat === player.seat_index;
   const isAdmin = tableConfig?.admin_session_id === sessionId;
 
@@ -75,6 +85,37 @@ export function PlayerContextMenu({ player, onClose, openLeft }: Props) {
     }
   }
 
+  async function handleProposeShtos() {
+    if (!tableId) return;
+    const amount = Math.min(Math.max(shtosAmount, shtosMin), shtosMax);
+    try {
+      await api.proposeShtos(tableId, {
+        session_id: sessionId,
+        target_player_id: player.player_id,
+        amount,
+      });
+      onClose();
+    } catch (e: any) {
+      toast(e?.message || 'Не удалось предложить штос', 'error');
+    }
+  }
+
+  async function handleToggleShtosBlock() {
+    if (!tableId) return;
+    const next = !isBlocked;
+    try {
+      await api.setShtosBlock(tableId, {
+        session_id: sessionId,
+        target_player_id: player.player_id,
+        blocked: next,
+      });
+      toast(next ? S.shtosBlockedToast(player.nickname) : S.shtosUnblockedToast(player.nickname), 'info', 2500);
+      onClose();
+    } catch (e: any) {
+      toast(e?.message || 'Не удалось обновить блокировку', 'error');
+    }
+  }
+
   return (
     <div className={`context-menu ${openLeft ? 'context-menu-left' : ''}`} onClick={(e) => e.stopPropagation()}>
       <div className="context-menu-header">
@@ -110,6 +151,32 @@ export function PlayerContextMenu({ player, onClose, openLeft }: Props) {
             {S.accuseStalling}
           </button>
         )}
+        {showShtosInput ? (
+          <div className="context-menu-tip-input">
+            <input
+              type="range"
+              min={shtosMin}
+              max={Math.max(shtosMin, shtosMax)}
+              step={sb}
+              value={Math.min(Math.max(shtosAmount, shtosMin), shtosMax)}
+              onChange={(e) => setShtosAmount(parseInt(e.target.value))}
+            />
+            <span className="tip-amount-display">{shtosAmount}</span>
+            <button onClick={handleProposeShtos} disabled={!canShtos}>{S.shtosPropose}</button>
+          </div>
+        ) : (
+          <button
+            className="context-menu-item"
+            onClick={() => setShowShtosInput(true)}
+            disabled={!canShtos}
+            title={!canShtos ? S.shtosTooSmallStack : undefined}
+          >
+            {S.shtosBtn}
+          </button>
+        )}
+        <button className="context-menu-item" onClick={handleToggleShtosBlock}>
+          {isBlocked ? S.shtosUnblockBtn : S.shtosBlockBtn}
+        </button>
         {isAdmin && (
           <button className="context-menu-item context-menu-item-danger" onClick={handleKick}>
             {S.kickBtn}

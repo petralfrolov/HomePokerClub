@@ -35,6 +35,7 @@ const SOUND_VARIANTS: Record<string, number> = {
   frol_tips: 1,
   player_joined: 1,
   player_left: 1,
+  card_dealt: 1,
 };
 
 // LRU cache for Howl instances to prevent unbounded growth over long sessions.

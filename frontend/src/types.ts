@@ -85,6 +85,48 @@ export interface FrolTipRequest {
   tip_step: number;
 }
 
+// === Shtos (head-to-head card gambling) ===
+
+export type ShtosPhase = 'pending_outgoing' | 'pending_incoming' | 'card_pick' | 'animating' | 'resolved';
+
+export interface ShtosOfferInfo {
+  offer_id: string;
+  from_id: string;        // initiator player_id
+  to_id: string;          // target player_id
+  from_nickname?: string;
+  to_nickname?: string;
+  amount: number;
+  /** Server-side cancel timeout in seconds (only on pending offers). */
+  timeout?: number;
+  /** Local Date.now() captured when the pending offer was received. */
+  received_at?: number;
+}
+
+export interface ShtosResolution {
+  offer_id: string;
+  from_id: string;
+  to_id: string;
+  amount: number;
+  picker_id: string;
+  picked_card: string;
+  deck_sequence: string[];   // dealt cards up to and including matching card
+  picker_pile: string[];
+  banker_pile: string[];
+  matching_card: string;
+  matching_pile: 'picker' | 'banker';
+  matching_index: number;
+  winner_id: string;
+  loser_id: string;
+}
+
+export interface ShtosState {
+  offer: ShtosOfferInfo;
+  phase: ShtosPhase;
+  picker_id?: string;
+  deck?: string[];           // full 52-card deck for picker UI
+  resolution?: ShtosResolution;
+}
+
 export interface WsEvent {
   event: string;
   [key: string]: any;

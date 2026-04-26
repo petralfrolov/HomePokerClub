@@ -173,6 +173,36 @@ class ChangeDealerType(BaseModel):
     dealer_type: str = Field(..., pattern=r"^(robot|frol|danilka)$")
 
 
+# ---------- Shtos ----------
+
+class ShtosPropose(BaseModel):
+    session_id: str
+    target_player_id: str
+    amount: int = Field(..., gt=0)
+
+
+class ShtosOfferRef(BaseModel):
+    session_id: str
+    offer_id: str
+
+
+class ShtosPickCard(BaseModel):
+    session_id: str
+    offer_id: str
+    card: str = Field(..., min_length=2, max_length=2)
+
+
+class ShtosBlock(BaseModel):
+    session_id: str
+    target_player_id: str
+    blocked: bool
+
+
+class ShtosProposeResponse(BaseModel):
+    ok: bool = True
+    offer_id: str
+
+
 # ---------- Avatar ----------
 
 class AvatarResponse(BaseModel):

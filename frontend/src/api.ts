@@ -215,6 +215,43 @@ export const api = {
       body: JSON.stringify(data),
     }),
 
+  // === Shtos (head-to-head card gambling) ===
+  proposeShtos: (tableId: string, data: { session_id: string; target_player_id: string; amount: number }) =>
+    request<{ ok: boolean; offer_id: string }>(`/tables/${tableId}/shtos/propose`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  acceptShtos: (tableId: string, data: { session_id: string; offer_id: string }) =>
+    request<{ ok: boolean }>(`/tables/${tableId}/shtos/accept`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  declineShtos: (tableId: string, data: { session_id: string; offer_id: string }) =>
+    request<{ ok: boolean }>(`/tables/${tableId}/shtos/decline`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  cancelShtos: (tableId: string, data: { session_id: string; offer_id: string }) =>
+    request<{ ok: boolean }>(`/tables/${tableId}/shtos/cancel`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  pickShtosCard: (tableId: string, data: { session_id: string; offer_id: string; card: string }) =>
+    request<{ ok: boolean }>(`/tables/${tableId}/shtos/pick-card`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  setShtosBlock: (tableId: string, data: { session_id: string; target_player_id: string; blocked: boolean }) =>
+    request<{ ok: boolean }>(`/tables/${tableId}/shtos/block`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
   // Avatar
   uploadAvatar: async (session_id: string, file: File) => {
     const form = new FormData();

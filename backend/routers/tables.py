@@ -31,6 +31,7 @@ from backend.schemas.schemas import (
     FrolTip, FrolDecline, OkResponse,
     ActionResponse, RebuyRequestResponse, AccuseStallingResponse, FrolDeclineResponse,
     ChangeDealerType, JoinApprove, JoinDeny,
+    ShtosPropose, ShtosOfferRef, ShtosPickCard, ShtosBlock, ShtosProposeResponse,
 )
 from backend.services.game_engine import game_engine, PlayerState
 from backend.services.dealer import (
@@ -1001,3 +1002,334 @@ async def change_dealer_type(table_id: str, body: ChangeDealerType, db: AsyncSes
     })
 
     return OkResponse()
+
+
+# ---- Shtos (head-to-head card gambling) ----
+
+from backend.services.shtos import shtos_manager, FULL_DECK
+
+SHTOS_OFFER_TIMEOUT_SECONDS = 20
+
+
+def _shtos_max_amount(game, p_a, p_b) -> int:
+    """Max stake = min(stack_a, stack_b) - 1 BB, snapped down to SB step (>=0)."""
+    sb = game.blind_small or 1
+    raw = min(p_a.stack, p_b.stack) - game.blind_big
+    if raw <= 0:
+        return 0
+    return (raw // sb) * sb
+
+
+async def _force_player_afk_midhand(table_id: str, game, player) -> None:
+    """Mark a player AFK and, if they are currently to act, run auto-action.
+
+    This lets a side-game (shtos) lock both participants out of the running
+    poker hand without blocking the rest of the table.
+    """
+    player.away = True
+    await ws_manager.broadcast_all(table_id, "player_away", {
+        "player_id": player.player_id,
+        "away": True,
+        "pending_away": False,
+    })
+    # If it's their turn right now, force the auto-action immediately so the
+    # rest of the table is not blocked waiting on the timer.
+    if (
+        game.stage not in ("waiting", "showdown")
+        and game.current_player_index is not None
+        and player.status == "active"
+    ):
+        current = game_engine._player_at_seat(game, game.current_player_index)
+        if current and current.player_id == player.player_id:
+            # Cancel any pending timer for this seat, then run auto-action.
+            timer = timer_manager.get_timer(table_id)
+            if timer:
+                timer.cancel()
+            result = game_engine.auto_action(game, player)
+            actual_action = result.get("action", "fold")
+            await ws_manager.broadcast_all(table_id, "action_made", {
+                "player_id": player.player_id,
+                "action": actual_action,
+                "auto": True,
+            })
+            await _check_hand_end(table_id, game, result)
+
+
+@router.post("/shtos/propose", response_model=ShtosProposeResponse)
+async def shtos_propose(table_id: str, body: ShtosPropose):
+    game = _get_game_or_404(table_id)
+    initiator = _get_player_or_403(game, body.session_id)
+    target = game.get_player_by_id(body.target_player_id)
+    if not target:
+        raise HTTPException(404, "Target not found")
+    if target.player_id == initiator.player_id:
+        raise HTTPException(400, "Cannot challenge yourself")
+
+    # Block check: if target has blocked initiator, refuse.
+    if shtos_manager.is_blocked(target.session_id, initiator.player_id):
+        raise HTTPException(403, "This player blocked shtos offers from you")
+
+    # No duplicate pending offer between same pair.
+    if shtos_manager.get_pending_between(table_id, initiator.player_id, target.player_id):
+        raise HTTPException(409, "There is already a pending shtos offer")
+
+    sb = game.blind_small or 1
+    bb = game.blind_big or 0
+    min_amount = max(1, bb // 2)  # 0.5 BB
+    max_amount = _shtos_max_amount(game, initiator, target)
+    if max_amount < min_amount:
+        raise HTTPException(400, "Stacks are too small for shtos")
+    if body.amount < min_amount:
+        raise HTTPException(400, f"Minimum bet is {min_amount}")
+    if body.amount > max_amount:
+        raise HTTPException(400, f"Maximum bet is {max_amount}")
+    # Snap to SB step.
+    if body.amount % sb != 0:
+        raise HTTPException(400, f"Amount must be a multiple of {sb}")
+
+    offer = shtos_manager.create_offer(
+        table_id=table_id,
+        initiator_id=initiator.player_id,
+        initiator_session=initiator.session_id,
+        target_id=target.player_id,
+        target_session=target.session_id,
+        amount=body.amount,
+    )
+
+    payload = {
+        "offer_id": offer.offer_id,
+        "from_id": initiator.player_id,
+        "to_id": target.player_id,
+        "from_nickname": initiator.nickname,
+        "to_nickname": target.nickname,
+        "amount": body.amount,
+        "timeout": SHTOS_OFFER_TIMEOUT_SECONDS,
+    }
+    # Send to both participants only (private — others don't need to see).
+    await ws_manager.send_personal(table_id, target.session_id, "shtos_offered", payload)
+    await ws_manager.send_personal(table_id, initiator.session_id, "shtos_offer_sent", payload)
+
+    # Server-enforced auto-cancel after timeout — guarantees the offer cannot
+    # linger forever even if both clients disconnect mid-prompt.
+    async def _auto_cancel():
+        try:
+            await asyncio.sleep(SHTOS_OFFER_TIMEOUT_SECONDS)
+            cancelled = shtos_manager.cancel(offer.offer_id)
+            if not cancelled:
+                return
+            cancel_payload = {
+                "offer_id": offer.offer_id,
+                "from_id": offer.initiator_id,
+                "to_id": offer.target_id,
+                "reason": "timeout",
+            }
+            await ws_manager.send_personal(
+                table_id, offer.initiator_session, "shtos_cancelled", cancel_payload
+            )
+            await ws_manager.send_personal(
+                table_id, offer.target_session, "shtos_cancelled", cancel_payload
+            )
+        except Exception:
+            logger.exception("shtos auto-cancel failed for %s", offer.offer_id)
+
+    asyncio.create_task(_auto_cancel())
+
+    return ShtosProposeResponse(offer_id=offer.offer_id)
+
+
+@router.post("/shtos/accept", response_model=OkResponse)
+async def shtos_accept(table_id: str, body: ShtosOfferRef):
+    game = _get_game_or_404(table_id)
+    responder = _get_player_or_403(game, body.session_id)
+    offer = shtos_manager.get(body.offer_id)
+    if not offer or offer.table_id != table_id:
+        raise HTTPException(404, "Offer not found")
+    if offer.target_id != responder.player_id:
+        raise HTTPException(403, "Only target can accept this offer")
+    if offer.status != "pending":
+        raise HTTPException(400, "Offer is no longer pending")
+
+    initiator = game.get_player_by_id(offer.initiator_id)
+    if not initiator:
+        raise HTTPException(404, "Initiator left the table")
+
+    # Verify both still have enough stack.
+    max_amount = _shtos_max_amount(game, initiator, responder)
+    if offer.amount > max_amount:
+        shtos_manager.decline(offer.offer_id)
+        raise HTTPException(400, "Stacks are no longer sufficient")
+
+    accepted = shtos_manager.accept(offer.offer_id)
+    if not accepted:
+        raise HTTPException(400, "Could not accept offer")
+
+    # Lock both players out of the live poker hand by forcing AFK.
+    await _force_player_afk_midhand(table_id, game, initiator)
+    await _force_player_afk_midhand(table_id, game, responder)
+    await _broadcast_game_state(table_id, game)
+
+    payload = {
+        "offer_id": offer.offer_id,
+        "from_id": offer.initiator_id,
+        "to_id": offer.target_id,
+        "amount": offer.amount,
+        "picker_id": offer.picker_id,
+        "deck": FULL_DECK,
+    }
+    # Notify both participants only.
+    await ws_manager.send_personal(table_id, initiator.session_id, "shtos_accepted", payload)
+    await ws_manager.send_personal(table_id, responder.session_id, "shtos_accepted", payload)
+    return OkResponse()
+
+
+@router.post("/shtos/decline", response_model=OkResponse)
+async def shtos_decline(table_id: str, body: ShtosOfferRef):
+    game = _get_game_or_404(table_id)
+    responder = _get_player_or_403(game, body.session_id)
+    offer = shtos_manager.get(body.offer_id)
+    if not offer or offer.table_id != table_id:
+        raise HTTPException(404, "Offer not found")
+    if offer.target_id != responder.player_id:
+        raise HTTPException(403, "Only target can decline this offer")
+    if offer.status != "pending":
+        raise HTTPException(400, "Offer is no longer pending")
+
+    shtos_manager.decline(offer.offer_id)
+
+    # Auto-block the initiator from sending more offers to this responder.
+    shtos_manager.set_block(responder.session_id, offer.initiator_id, True)
+
+    payload = {
+        "offer_id": offer.offer_id,
+        "from_id": offer.initiator_id,
+        "to_id": offer.target_id,
+    }
+    await ws_manager.send_personal(table_id, offer.initiator_session, "shtos_declined", payload)
+    await ws_manager.send_personal(table_id, responder.session_id, "shtos_declined", payload)
+    # Push updated block list to the responder so the UI reflects the auto-block.
+    await ws_manager.send_personal(
+        table_id,
+        responder.session_id,
+        "shtos_blocks",
+        {"blocked_player_ids": shtos_manager.get_blocks(responder.session_id)},
+    )
+    return OkResponse()
+
+
+@router.post("/shtos/cancel", response_model=OkResponse)
+async def shtos_cancel(table_id: str, body: ShtosOfferRef):
+    """Initiator-only manual cancel of a still-pending offer (no auto-block)."""
+    game = _get_game_or_404(table_id)
+    actor = _get_player_or_403(game, body.session_id)
+    offer = shtos_manager.get(body.offer_id)
+    if not offer or offer.table_id != table_id:
+        raise HTTPException(404, "Offer not found")
+    if offer.initiator_id != actor.player_id:
+        raise HTTPException(403, "Only initiator can cancel this offer")
+    if offer.status != "pending":
+        raise HTTPException(400, "Offer is no longer pending")
+
+    shtos_manager.cancel(offer.offer_id)
+    payload = {
+        "offer_id": offer.offer_id,
+        "from_id": offer.initiator_id,
+        "to_id": offer.target_id,
+        "reason": "initiator_cancel",
+    }
+    await ws_manager.send_personal(table_id, offer.initiator_session, "shtos_cancelled", payload)
+    await ws_manager.send_personal(table_id, offer.target_session, "shtos_cancelled", payload)
+    return OkResponse()
+
+
+@router.post("/shtos/pick-card", response_model=OkResponse)
+async def shtos_pick_card(table_id: str, body: ShtosPickCard):
+    game = _get_game_or_404(table_id)
+    actor = _get_player_or_403(game, body.session_id)
+    offer = shtos_manager.get(body.offer_id)
+    if not offer or offer.table_id != table_id:
+        raise HTTPException(404, "Offer not found")
+    if offer.status != "accepted":
+        raise HTTPException(400, "Offer not in pick-card phase")
+    if offer.picker_id != actor.player_id:
+        raise HTTPException(403, "You are not the picker")
+    if body.card not in FULL_DECK:
+        raise HTTPException(400, "Invalid card")
+
+    resolved = shtos_manager.resolve(body.offer_id, body.card)
+    if not resolved or not resolved.resolution:
+        raise HTTPException(500, "Failed to resolve")
+
+    res = resolved.resolution
+    initiator = game.get_player_by_id(offer.initiator_id)
+    target = game.get_player_by_id(offer.target_id)
+    if not initiator or not target:
+        raise HTTPException(404, "Player left the table")
+
+    winner = game.get_player_by_id(res.winner_id)
+    loser = game.get_player_by_id(res.loser_id)
+    if not winner or not loser:
+        raise HTTPException(404, "Player left the table")
+
+    # Cap by loser's actual stack (defensive — shouldn't be needed).
+    transfer = min(offer.amount, loser.stack)
+
+    payload = {
+        "offer_id": offer.offer_id,
+        "from_id": offer.initiator_id,
+        "to_id": offer.target_id,
+        "amount": transfer,
+        "picker_id": offer.picker_id,
+        "picked_card": body.card,
+        **res.to_dict(),
+    }
+    # Broadcast the resolution first so all clients can run the dealing
+    # animation. Defer the actual chip transfer and game_state broadcast
+    # until the animation finishes, otherwise the winner's stack would
+    # update immediately and spoil the outcome.
+    await ws_manager.broadcast_all(table_id, "shtos_resolved", payload)
+
+    # Animation length must match the frontend (ANIM_STEP_MS = 250ms per card
+    # plus RESULT_REVEAL_DELAY_MS = 600ms) with a small network buffer.
+    anim_delay_seconds = (len(res.deck_sequence) * 0.25) + 0.6 + 0.2
+
+    async def _apply_transfer_after_animation():
+        try:
+            await asyncio.sleep(anim_delay_seconds)
+            # Re-fetch in case players left mid-animation.
+            game_now = game_engine.get_game(table_id)
+            if not game_now:
+                return
+            w = game_now.get_player_by_id(res.winner_id)
+            l = game_now.get_player_by_id(res.loser_id)
+            if not w or not l:
+                return
+            t = min(transfer, l.stack)
+            l.stack -= t
+            w.stack += t
+            await _broadcast_game_state(table_id, game_now)
+        except Exception:
+            logger.exception("shtos deferred transfer failed for %s", offer.offer_id)
+
+    asyncio.create_task(_apply_transfer_after_animation())
+    return OkResponse()
+
+
+@router.post("/shtos/block", response_model=OkResponse)
+async def shtos_set_block(table_id: str, body: ShtosBlock):
+    game = _get_game_or_404(table_id)
+    actor = _get_player_or_403(game, body.session_id)
+    target = game.get_player_by_id(body.target_player_id)
+    if not target:
+        raise HTTPException(404, "Target not found")
+    if target.player_id == actor.player_id:
+        raise HTTPException(400, "Cannot block yourself")
+
+    shtos_manager.set_block(actor.session_id, target.player_id, body.blocked)
+    await ws_manager.send_personal(
+        table_id,
+        actor.session_id,
+        "shtos_blocks",
+        {"blocked_player_ids": shtos_manager.get_blocks(actor.session_id)},
+    )
+    return OkResponse()
+

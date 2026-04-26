@@ -1,5 +1,5 @@
 import { StateCreator } from 'zustand';
-import { GameState, FrolTipRequest, TableConfig } from '../types';
+import { GameState, FrolTipRequest, TableConfig, ShtosState } from '../types';
 
 export interface GameSlice {
   // Table
@@ -62,6 +62,12 @@ export interface GameSlice {
   // Winner highlight
   winnerPlayerIds: string[];
   setWinnerPlayerIds: (ids: string[]) => void;
+
+  // === Shtos (head-to-head card gambling) ===
+  shtos: ShtosState | null;
+  setShtos: (s: ShtosState | null) => void;
+  shtosBlocks: string[];                     // player_ids I have blocked
+  setShtosBlocks: (ids: string[]) => void;
 }
 
 export const createGameSlice: StateCreator<GameSlice, [], [], GameSlice> = (set) => ({
@@ -113,4 +119,9 @@ export const createGameSlice: StateCreator<GameSlice, [], [], GameSlice> = (set)
 
   winnerPlayerIds: [],
   setWinnerPlayerIds: (ids) => set({ winnerPlayerIds: ids }),
+
+  shtos: null,
+  setShtos: (s) => set({ shtos: s }),
+  shtosBlocks: [],
+  setShtosBlocks: (ids) => set({ shtosBlocks: ids }),
 });

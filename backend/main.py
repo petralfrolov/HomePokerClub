@@ -77,6 +77,8 @@ async def _cleanup_idle_tables():
 
                     await db.commit()
                     game_engine.remove_game(table_id)
+                    from backend.services.shtos import shtos_manager as _shtos_cleanup
+                    _shtos_cleanup.clear_table(table_id)
                     logger.info("Deleted idle table %s (no activity for 60 min)", table_id)
                 except Exception:
                     logger.exception("Error cleaning up idle table %s", table_id)
@@ -196,6 +198,14 @@ async def websocket_endpoint(websocket: WebSocket, table_id: str, session_id: st
     if game:
         snapshot = game_engine.get_game_snapshot(game, for_session_id=session_id)
         await ws_manager.send_personal(table_id, session_id, "game_state", snapshot)
+
+    # Send shtos blocks for this session (if any are stored in memory).
+    from backend.services.shtos import shtos_manager as _shtos_mgr
+    blocks = _shtos_mgr.get_blocks(session_id)
+    if blocks:
+        await ws_manager.send_personal(
+            table_id, session_id, "shtos_blocks", {"blocked_player_ids": blocks}
+        )
 
     try:
         while True:
