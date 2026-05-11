@@ -94,14 +94,27 @@
 }
 
 /* Community cards */
-.community-cards {
+.community-cards-area {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
+  z-index: 10;
+  padding: 10px 14px;
+  border: 2px dashed rgba(255, 215, 0, 0.35);
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.community-cards {
   display: flex;
   gap: 6px;
-  z-index: 10;
+}
+
+.community-card-slot {
+  width: calc(72px * var(--scale-community-card));
+  height: calc(102px * var(--scale-community-card));
+  flex-shrink: 0;
 }
 
 /* Card styles */
@@ -426,7 +439,7 @@
   }
 
   .poker-table-wrapper {
-    width: 98%;
+    width: 80%;
     max-width: none;
   }
 
@@ -458,6 +471,11 @@
     width: calc(50px * var(--scale-community-card));
     height: calc(72px * var(--scale-community-card));
     font-size: calc(1rem * var(--scale-community-card));
+  }
+
+  .community-card-slot {
+    width: calc(50px * var(--scale-community-card));
+    height: calc(72px * var(--scale-community-card));
   }
 
   .cashout-ledger {
@@ -498,7 +516,7 @@
   }
 
   .poker-table-wrapper {
-    width: 100%;
+    width: 80%;
     /* Let the table fill available area without forcing 1.8/1 aspect — avoids being too tall or clipped */
     aspect-ratio: auto;
     height: clamp(240px, 52vh, 420px);
@@ -523,6 +541,11 @@
     width: clamp(34px, 12vw, 46px);
     height: clamp(50px, 17vw, 66px);
     font-size: clamp(0.7rem, 2.6vw, 0.9rem);
+  }
+
+  .community-card-slot {
+    width: clamp(34px, 12vw, 46px);
+    height: clamp(50px, 17vw, 66px);
   }
 
   .cashout-ledger {
