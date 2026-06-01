@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  backend:
+    image: ${DOCKER_REGISTRY_USER:-petralfrolov}/homepoker-backend:latest
+    container_name: poker_backend
+    restart: always
+    ports:
+      - "8000:8000"
+    volumes:
+      - poker_db_data:/app/backend/data
+    env_file:
+      - .env
+
+  frontend:
+    image: ${DOCKER_REGISTRY_USER:-petralfrolov}/homepoker-frontend:latest
+    container_name: poker_frontend
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+volumes:
+  poker_db_data:

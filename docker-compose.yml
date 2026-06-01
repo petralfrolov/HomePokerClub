@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  backend:
+    image: ${DOCKER_REGISTRY_USER:-petralfrolov}/homepoker-backend:latest
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: poker_backend
+    restart: always
+    ports:
+      - "8000:8000"
+    volumes:
+      - poker_db_data:/app/backend/data # сохраняем аватарки и локальную БД sqlite
+    env_file:
+      - .env
+
+  frontend:
+    image: ${DOCKER_REGISTRY_USER:-petralfrolov}/homepoker-frontend:latest
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: poker_frontend
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+volumes:
+  poker_db_data:

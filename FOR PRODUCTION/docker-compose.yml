@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  backend:
+    image: petralfrolov/homepoker-backend:latest
+    container_name: poker_backend
+    restart: always
+    ports:
+      - "8000:8000"
+    volumes:
+      - poker_db_data:/app/backend/data
+    env_file:
+      - .env
+
+  frontend:
+    image: petralfrolov/homepoker-frontend:latest
+    container_name: poker_frontend
+    restart: always
+    ports:
+      - "8080:80" # Поменяли внешний порт с 80 на 8080
+    depends_on:
+      - backend
+
+volumes:
+  poker_db_data:
