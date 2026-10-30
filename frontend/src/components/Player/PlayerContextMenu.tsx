@@ -71,6 +71,19 @@ export function PlayerContextMenu({ player, onClose, openLeft }: Props) {
     }
   }
 
+  async function handleThreaten() {
+    if (!tableId) return;
+    try {
+      await api.threatenPlayer(tableId, {
+        session_id: sessionId,
+        target_player_id: player.player_id,
+      });
+      onClose();
+    } catch (e: any) {
+      toast(e?.message || S.threatenFailed, 'error');
+    }
+  }
+
   async function handleKick() {
     if (!tableId) return;
     if (!confirm(S.kickConfirm(player.nickname))) return;
@@ -151,6 +164,9 @@ export function PlayerContextMenu({ player, onClose, openLeft }: Props) {
             {S.accuseStalling}
           </button>
         )}
+        <button className="context-menu-item" onClick={handleThreaten}>
+          {S.threatenBtn}
+        </button>
         {showShtosInput ? (
           <div className="context-menu-tip-input">
             <input

@@ -142,6 +142,11 @@ class AccuseStalling(BaseModel):
     target_player_id: str
 
 
+class ThreatenPlayer(BaseModel):
+    session_id: str
+    target_player_id: str
+
+
 class RevealCard(BaseModel):
     session_id: str
     card_index: int = Field(..., ge=0, le=1)

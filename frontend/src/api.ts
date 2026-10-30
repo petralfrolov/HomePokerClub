@@ -152,6 +152,12 @@ export const api = {
       body: JSON.stringify(data),
     }),
 
+  threatenPlayer: (tableId: string, data: { session_id: string; target_player_id: string }) =>
+    request<{ ok: boolean }>(`/tables/${tableId}/threaten`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
   revealCard: (tableId: string, data: { session_id: string; card_index: number }) =>
     request<{ ok: boolean }>(`/tables/${tableId}/reveal-card`, {
       method: 'POST',

@@ -15,7 +15,7 @@ export default defineConfig({
   server: {
     port: 5173,
     host: '127.0.0.1',
-    allowedHosts: ['poker.vgsoft.site'],
+    allowedHosts: ['poker.vgsoft.space'],
     proxy: {
       '/api': 'http://localhost:8001',
       '/docs': 'http://localhost:8001',

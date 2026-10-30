@@ -27,7 +27,7 @@ from backend.database import async_session as async_session_factory
 from backend.models.tables import Table, Player, GameRound, RoundAction
 from backend.schemas.schemas import (
     GameAction, StartGame, RebuyRequest, RebuyApprove, RebuyDeny,
-    TipPlayer, AccuseStalling, RevealCard, AwayStatus,
+    TipPlayer, AccuseStalling, ThreatenPlayer, RevealCard, AwayStatus,
     FrolTip, FrolDecline, OkResponse,
     ActionResponse, RebuyRequestResponse, AccuseStallingResponse, FrolDeclineResponse,
     ChangeDealerType, JoinApprove, JoinDeny,
@@ -870,6 +870,26 @@ async def accuse_stalling(table_id: str, body: AccuseStalling):
     })
 
     return AccuseStallingResponse(new_time_bank=STALLING_TIME_BANK_PENALTY)
+
+
+@router.post("/threaten", response_model=OkResponse)
+async def threaten_player(table_id: str, body: ThreatenPlayer):
+    game = _get_game_or_404(table_id)
+    actor = _get_player_or_403(game, body.session_id)
+    target = game.get_player_by_id(body.target_player_id)
+
+    if not target:
+        raise HTTPException(404, "Target not found")
+    if target.player_id == actor.player_id:
+        raise HTTPException(400, "Cannot threaten yourself")
+
+    await ws_manager.send_personal(table_id, target.session_id, "player_threatened", {
+        "from_id": actor.player_id,
+        "from_nickname": actor.nickname,
+        "target_id": target.player_id,
+    })
+
+    return OkResponse()
 
 
 @router.post("/reveal-card", response_model=OkResponse)

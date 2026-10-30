@@ -3,6 +3,7 @@ import { useStore, toast } from '../store/useStore';
 import { WsEvent } from '../types';
 import { playSound } from './useSound';
 import type { ConnectionStatus } from '../store/uiSlice';
+import { S } from '../strings';
 
 const PING_INTERVAL_MS = 20_000;
 const PONG_TIMEOUT_MS = 45_000; // consider half-open if no pong for this long
@@ -123,6 +124,9 @@ export function useWebSocket(tableId: string | null) {
         }
         break;
       }
+      case 'player_threatened':
+        toast(S.threatenedNotification(data.from_nickname), 'warning', 4000);
+        break;
       case 'cards_dealt':
         setWinnerPlayerIds([]);
         playSound('card_received');

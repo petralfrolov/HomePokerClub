@@ -120,6 +120,9 @@ export const S = {
   tipBtn: '💰 Типнуть',
   tipDisabledTooSmall: 'Недостаточно фишек для чаевых (нужно > 1 ББ)',
   accuseStalling: '⏱ Упрекнуть в столлинге',
+  threatenBtn: 'Угрожать',
+  threatenFailed: 'Не удалось отправить угрозу',
+  threatenedNotification: (name: string) => `Игрок ${name} посмотрел ваши карты`,
   kickBtn: '❌ Кикнуть',
   kickConfirm: (name: string) => `Кикнуть ${name}? Будет выполнен принудительный кэшаут.`,
 
